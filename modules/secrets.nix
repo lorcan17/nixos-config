@@ -8,19 +8,6 @@
   #   cd ~/nix-config/secrets && agenix -e secret-name.age
 
   age.secrets = {
-    tailscale-auth = {
-      file  = ../secrets/tailscale-auth.age;
-      mode  = "0400";
-    };
-    transmission = {
-      file  = ../secrets/transmission.age;
-      mode  = "0400";
-      owner = "transmission";
-    };
-    mullvad-privkey = {
-      file  = ../secrets/mullvad-privkey.age;
-      mode  = "0400";
-    };
     fmp-api-key = {
       file = ../secrets/fmp-api-key.age;
       mode = "0400";

@@ -11,8 +11,5 @@ let
   lorcan   = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILNGNQUutGyQUKHEXNlchZggmMjnSkVnl0f8Hl1K8nb7 ltravers92@gmail.com";
   optiplex = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOcv94KIQ5JhrNxXmLcDByuCAmxu2h59sGYpzk87RQzy root@optiplex";
 in {
-  "tailscale-auth.age".publicKeys    = [ lorcan optiplex ];
-  "transmission.age".publicKeys      = [ lorcan optiplex ];
-  "mullvad-privkey.age".publicKeys   = [ lorcan optiplex ];
   "fmp-api-key.age".publicKeys       = [ lorcan optiplex ];
 }

@@ -21,6 +21,7 @@
         # Core
         ./modules/nix-settings.nix
         ./modules/lorcan.nix
+        ./modules/secrets.nix
 
         # Shell and tools
         ./modules/git.nix
