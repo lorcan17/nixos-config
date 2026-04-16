@@ -5,17 +5,17 @@
     nixpkgs.url     = "github:NixOS/nixpkgs/nixos-unstable";
     nix-darwin      = { url = "github:LnL7/nix-darwin"; inputs.nixpkgs.follows = "nixpkgs"; };
     home-manager    = { url = "github:nix-community/home-manager"; inputs.nixpkgs.follows = "nixpkgs"; };
-    # agenix — enable when adding the OptiPlex
-    # agenix = { url = "github:ryantm/agenix"; inputs.nixpkgs.follows = "nixpkgs"; };
+    agenix          = { url = "github:ryantm/agenix"; inputs.nixpkgs.follows = "nixpkgs"; };
   };
 
-  outputs = { self, nixpkgs, nix-darwin, home-manager }: {
+  outputs = { self, nixpkgs, nix-darwin, home-manager, agenix }: {
 
     darwinConfigurations."lorcans-mac" = nix-darwin.lib.darwinSystem {
       system = "aarch64-darwin";
-      specialArgs = { isDarwin = true; };
+      specialArgs = { inherit agenix; isDarwin = true; };
       modules = [
         home-manager.darwinModules.home-manager
+        agenix.darwinModules.default
         { home-manager.useGlobalPkgs = true; home-manager.useUserPackages = true; }
 
         # Core

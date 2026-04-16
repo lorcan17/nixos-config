@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, agenix, ... }:
 {
   home-manager.users.lorcan = {
     home.packages = with pkgs; [
@@ -20,7 +20,7 @@
       # Misc
       unzip
       nodejs_24
-      agenix
+      agenix.packages.${pkgs.system}.default
     ];
   };
 }
