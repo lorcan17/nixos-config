@@ -8,7 +8,18 @@
     agenix          = { url = "github:ryantm/agenix"; inputs.nixpkgs.follows = "nixpkgs"; };
   };
 
-  outputs = { self, nixpkgs, nix-darwin, home-manager, agenix }: {
+  outputs = { self, nixpkgs, nix-darwin, home-manager, agenix }:
+    let
+      # Auto-import every .nix file directly inside `dir` (non-recursive).
+      # Used to route modules/{shared,mac,optiplex}/* into the right host.
+      importDir = dir:
+        let
+          entries = builtins.readDir dir;
+          nixFiles = builtins.filter
+            (name: entries.${name} == "regular" && builtins.match ".*\\.nix" name != null)
+            (builtins.attrNames entries);
+        in map (name: dir + "/${name}") nixFiles;
+    in {
 
     darwinConfigurations."lorcans-mac" = nix-darwin.lib.darwinSystem {
       system = "aarch64-darwin";
@@ -17,32 +28,11 @@
         home-manager.darwinModules.home-manager
         agenix.darwinModules.default
         { home-manager.useGlobalPkgs = true; home-manager.useUserPackages = true; }
-
-        # Core
-        ./modules/nix-settings.nix
-        ./modules/lorcan.nix
-        ./modules/secrets.nix
-
-        # Shell and tools
-        ./modules/git.nix
-        ./modules/shell.nix
-        ./modules/ssh.nix
-        ./modules/terminal-tools.nix
-        ./modules/vim.nix
-
-        # Mac system config
-        ./modules/mac-system.nix
-        ./modules/mac-keyboard.nix
-        ./modules/mac-homebrew.nix
-        ./modules/mac-fonts.nix
-        ./modules/mac-dev.nix
-      ];
+      ]
+      ++ importDir ./modules/shared
+      ++ importDir ./modules/mac;
     };
 
-    # OptiPlex — homelab server
-    # Minimal module set to get the base system onto the flake.
-    # Additional modules (tailscale, docker, monitoring, secrets, etc.) to be
-    # layered in one at a time via nixos-rebuild test once this base works.
     nixosConfigurations.optiplex = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       specialArgs = { inherit agenix; isDarwin = false; };
@@ -50,36 +40,9 @@
         home-manager.nixosModules.home-manager
         agenix.nixosModules.default
         { home-manager.useGlobalPkgs = true; home-manager.useUserPackages = true; }
-
-        # Core (cross-platform)
-        ./modules/nix-settings.nix
-        ./modules/lorcan.nix
-        ./modules/secrets.nix
-
-        # Shell and tools (home-manager; cross-platform)
-        ./modules/git.nix
-        ./modules/shell.nix
-        ./modules/ssh.nix
-        ./modules/terminal-tools.nix
-        ./modules/vim.nix
-
-        # OptiPlex-specific
-        ./modules/hardware-optiplex.nix
-        ./modules/networking-optiplex.nix
-
-        # Layer in after base boot is working:
-        ./modules/tailscale.nix
-        ./modules/ollama.nix
-        # ./modules/openclaw.nix
-        # ./modules/open-webui.nix
-        # ./modules/docker.nix
-        # ./modules/vpn.nix
-        # ./modules/torrenting.nix
-        # ./modules/security.nix
-        # ./modules/monitoring.nix
-        # ./modules/backups.nix
-        # ./modules/syncthing.nix
-      ];
+      ]
+      ++ importDir ./modules/shared
+      ++ importDir ./modules/optiplex;
     };
 
   };

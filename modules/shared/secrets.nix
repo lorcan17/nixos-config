@@ -8,12 +8,12 @@
 
   age.secrets = {
     fmp-api-key = {
-      file  = ../secrets/fmp-api-key.age;
+      file  = ../../secrets/fmp-api-key.age;
       mode  = "0400";
       owner = "lorcan";
     };
     tailscale-authkey = {
-      file = ../secrets/tailscale-authkey.age;
+      file = ../../secrets/tailscale-authkey.age;
       mode = "0400";
       # owner defaults to root; tailscaled reads this at daemon start
     };
