@@ -1,0 +1,20 @@
+# Nix build outputs
+result
+result-*
+
+# direnv cache
+.direnv/
+
+# Editor / OS junk
+*.swp
+*.swo
+.DS_Store
+
+# Local env overrides (never commit)
+.env
+.env.local
+
+# Plaintext secrets — only .age files should be in secrets/
+secrets/*.key
+secrets/*.pem
+secrets/*.plain

@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "pre-commit": [
+      {
+        "command": "nix flake check --no-build",
+        "description": "Validate flake structure"
+      },
+      {
+        "command": "grep -r 'REPLACE\\|TODO\\|FIXME' modules/ && echo 'WARNING: Placeholders found' || true",
+        "description": "Check for unfilled placeholders"
+      }
+    ]
+  }
+}
