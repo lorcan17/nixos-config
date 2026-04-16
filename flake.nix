@@ -44,9 +44,10 @@
     # layered in one at a time via nixos-rebuild test once this base works.
     nixosConfigurations.optiplex = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
-      specialArgs = { isDarwin = false; };
+      specialArgs = { inherit agenix; isDarwin = false; };
       modules = [
         home-manager.nixosModules.home-manager
+        agenix.nixosModules.default
         { home-manager.useGlobalPkgs = true; home-manager.useUserPackages = true; }
 
         # Core (cross-platform)

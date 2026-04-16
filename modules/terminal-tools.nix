@@ -20,6 +20,7 @@
       # Misc
       unzip
       nodejs_24
+      agenix
     ];
   };
 }
