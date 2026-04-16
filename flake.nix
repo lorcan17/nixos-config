@@ -68,7 +68,7 @@
         ./modules/networking-optiplex.nix
 
         # Layer in after base boot is working:
-        # ./modules/tailscale.nix
+        ./modules/tailscale.nix
         ./modules/ollama.nix
         # ./modules/openclaw.nix
         # ./modules/open-webui.nix
