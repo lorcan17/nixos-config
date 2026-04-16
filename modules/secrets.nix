@@ -21,5 +21,9 @@
       file  = ../secrets/mullvad-privkey.age;
       mode  = "0400";
     };
+    fmp-api-key = {
+      file = ../secrets/fmp-api-key.age;
+      mode = "0400";
+    };
   };
 }

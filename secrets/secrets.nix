@@ -14,4 +14,5 @@ in {
   "tailscale-auth.age".publicKeys    = [ lorcan optiplex ];
   "transmission.age".publicKeys      = [ lorcan optiplex ];
   "mullvad-privkey.age".publicKeys   = [ lorcan optiplex ];
+  "fmp-api-key.age".publicKeys       = [ lorcan optiplex ];
 }
