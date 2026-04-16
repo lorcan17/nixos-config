@@ -13,4 +13,5 @@ let
 in {
   "fmp-api-key.age".publicKeys       = [ lorcan optiplex ];
   "tailscale-authkey.age".publicKeys = [ lorcan optiplex ];
+  "domain-name.age".publicKeys       = [ lorcan optiplex ];
 }

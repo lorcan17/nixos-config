@@ -30,12 +30,13 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | Secret | Hosts | Purpose |
 |---|---|---|
 | `fmp-api-key` | Mac + OptiPlex | Financial Modelling Prep API, exported as `$FMP_API_KEY` in zsh |
+| `tailscale-authkey` | OptiPlex | Reusable auth key consumed by `tailscaled` at daemon start |
+| `domain-name` | OptiPlex | **Caddy-only** (env-file format, `DOMAIN=...`). Rename if another service ever needs the domain — don't share. |
 
 **Planned:**
 - `anthropic-api-key` — hybrid LLM offload for heavy reasoning
 - `mullvad-wg-config` — WireGuard config for torrent network namespace
 - `openai-api-key` — premium TTS for audiobooks (per-book opt-in)
-- `domain-name` — reverse-proxy subdomain routing
 
 ---
 
@@ -44,7 +45,7 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | Service | Module | Status | Notes |
 |---|---|---|---|
 | Ollama | `ollama.nix` | ✅ Running | CPU-only, `0.0.0.0:11434` |
-| Tailscale | `tailscale.nix` | ⬜ Not started | Unblocks most other services |
+| Tailscale | `tailscale.nix` | ✅ Running | Auth key via agenix; unblocks most other services |
 | Mullvad + WireGuard | `vpn.nix` | ⬜ Not started | Namespace-isolated; prerequisite for torrenting |
 | Torrenting | `torrenting.nix` | ⬜ Not started | Transmission inside `wg-mullvad` netns |
 | Docker | `docker.nix` | ⬜ Not started | Accepted as required (Ghostfolio, LangAlpha, Immich are Docker-only) |
@@ -69,8 +70,8 @@ _Nothing currently in progress._
 ## Backlog
 
 ### Tier 1 — Foundations (unblock everything else)
-- [ ] **Tailscale** — VPN mesh; prerequisite for anything reachable off-LAN.
-- [ ] **Domain name secret** — agenix entry so service configs don't hardcode.
+- [x] **Tailscale** — VPN mesh; prerequisite for anything reachable off-LAN. _(landed 2026-04-16)_
+- [x] **Domain name secret** — agenix entry so service configs don't hardcode. _(landed 2026-04-16)_
 - [ ] **Mullvad + WireGuard (vpn.nix)** — WireGuard config from agenix. Introduces the network-namespace primitive that `torrenting.nix` will reuse.
 - [ ] **Docker (docker.nix)** — accepted as necessary. Ghostfolio, LangAlpha, and likely Immich are Docker-only upstream.
 - [ ] **Caddy reverse proxy** — subdomain routing once Tailscale + domain are in.
