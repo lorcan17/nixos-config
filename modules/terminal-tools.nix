@@ -21,6 +21,7 @@
       unzip
       nodejs_24
       agenix.packages.${pkgs.system}.default
+      tmux
     ];
   };
 }
