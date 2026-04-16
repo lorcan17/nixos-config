@@ -115,13 +115,16 @@ _Nothing currently in progress._
 
 ## Decision Log
 
-| Date | Decision | Reason |
-|---|---|---|
-| 2026-04-16 | agenix for both Mac + OptiPlex | Consistent secret management; Mac uses user SSH key, OptiPlex uses host key |
-| 2026-04-16 | Shared modules for shell/tools | Reduces drift; platform-exclusive options guarded with `lib.optionalAttrs` |
-| 2026-04-16 | Docker accepted as required | Ghostfolio, LangAlpha, Immich are Docker-only upstream; native packaging effort not justified |
-| 2026-04-16 | Hybrid LLM: local Hermes 8B + Claude API | CPU-only OptiPlex can't sustain heavy agentic loops; API offload for reasoning, local for cheap/frequent tasks |
-| 2026-04-16 | Torrent isolation via NixOS network namespaces, not kill-switch | Torrent process has no route at all if tunnel drops — stronger leak guarantee than iptables rules |
-| 2026-04-16 | TTS default = Kokoro (local) | CPU-runnable; quality is a large step up from Piper. OpenAI TTS kept as per-book premium opt-in |
-| 2026-04-16 | STT = whisper.cpp local (large-v3) | Near-parity with hosted Whisper; no need for cloud STT |
-| 2026-04-16 | Facebook Marketplace out of scope for car-hunt agent | Anti-scraping too hostile; Craigslist RSS is the clean path |
+Full ADR-lite entries with reasoning live in [DECISIONS.md](./DECISIONS.md). This is the index:
+
+| Date | Decision |
+|---|---|
+| 2026-04-16 | agenix on both Mac and OptiPlex |
+| 2026-04-16 | Module subdirectories with auto-import (shared / mac / optiplex / wip) |
+| 2026-04-16 | Keep Mullvad separate from Tailscale exit nodes |
+| 2026-04-16 | Docker accepted as required |
+| 2026-04-16 | Hybrid LLM: local Hermes 8B + Anthropic API |
+| 2026-04-16 | Torrent isolation via NixOS network namespaces, not kill-switch |
+| 2026-04-16 | TTS default = Kokoro (local); OpenAI TTS as per-book premium opt-in |
+| 2026-04-16 | STT = whisper.cpp local (large-v3) |
+| 2026-04-16 | Facebook Marketplace out of scope for car-hunt agent |

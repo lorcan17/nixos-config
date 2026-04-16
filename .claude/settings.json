@@ -17,8 +17,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '{\"systemMessage\": \"Before ending: did you update PROJECT_STATUS.md? Check backlog, in-flight, known issues, and decision log reflect what changed this session.\"}'",
-            "statusMessage": "Prompting project status update..."
+            "command": "echo '{\"systemMessage\": \"Before ending: (1) were any decisions made this session? If yes, each needs an ADR-lite entry in DECISIONS.md plus a one-line pointer added to PROJECT_STATUS.md decision log index. (2) Does PROJECT_STATUS.md backlog / in-flight / known-issues reflect what changed this session?\"}'",
+            "statusMessage": "Prompting decisions + project status update..."
           }
         ]
       }
