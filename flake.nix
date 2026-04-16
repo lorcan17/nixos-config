@@ -76,7 +76,7 @@
         # ./modules/security.nix
         # ./modules/monitoring.nix
         # ./modules/backups.nix
-        # ./modules/obsidian.nix
+        # ./modules/syncthing.nix
       ];
     };
 

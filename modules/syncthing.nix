@@ -1,7 +1,7 @@
 { ... }:
 {
-  # OptiPlex: sync the Obsidian vault via Syncthing so OpenClaw can read PARA notes.
-  # On Mac, Obsidian is installed as a cask via mac-homebrew.nix.
+  # OptiPlex: sync files (e.g., Obsidian vaults, documents) via Syncthing.
+  # This provides the "transfer" layer between devices.
   services.syncthing = {
     enable   = true;
     user     = "lorcan";
