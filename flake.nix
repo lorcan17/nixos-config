@@ -75,7 +75,6 @@
         # ./modules/docker.nix
         # ./modules/vpn.nix
         # ./modules/torrenting.nix
-        # ./modules/secrets.nix
         # ./modules/security.nix
         # ./modules/monitoring.nix
         # ./modules/backups.nix

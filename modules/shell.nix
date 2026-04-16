@@ -36,11 +36,7 @@
       };
 
       initContent = ''
-        # Load FMP_API_KEY from agenix (Mac path)
-        if [[ -f /run/agenix.d/1/fmp-api-key ]]; then
-          export FMP_API_KEY=$(cat /run/agenix.d/1/fmp-api-key)
-        # Load FMP_API_KEY from agenix (NixOS path)
-        elif [[ -f /run/agenix/fmp-api-key ]]; then
+        if [[ -f /run/agenix/fmp-api-key ]]; then
           export FMP_API_KEY=$(cat /run/agenix/fmp-api-key)
         fi
 

@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/lorcan/nix-config && echo '=== nix-config session start ===' && echo && git log --oneline -3 && echo && git status --short",
+            "statusMessage": "Checking repo state...",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"systemMessage\": \"Before ending: did you update PROJECT_STATUS.md? Check backlog, in-flight, known issues, and decision log reflect what changed this session.\"}'",
+            "statusMessage": "Prompting project status update..."
+          }
+        ]
+      }
+    ]
+  }
+}
