@@ -1,9 +1,9 @@
 { ... }:
 {
   services.ollama = {
-    enable        = true;
-    listenAddress = "0.0.0.0:11434"; # reachable from Mac via Tailscale
-    acceleration  = null;            # CPU only — set "cuda" or "rocm" if you add a GPU
+    enable = true;
+    host   = "0.0.0.0"; # reachable from Mac via Tailscale
+    port   = 11434;
   };
 
   networking.firewall.allowedTCPPorts = [ 11434 ];
