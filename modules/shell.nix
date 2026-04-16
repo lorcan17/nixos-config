@@ -35,7 +35,7 @@
         install-claude-code = "claude update";
       };
 
-      initExtra = ''
+      initContent = ''
         # Load FMP_API_KEY from agenix (Mac path)
         if [[ -f /run/agenix.d/1/fmp-api-key ]]; then
           export FMP_API_KEY=$(cat /run/agenix.d/1/fmp-api-key)
@@ -47,7 +47,7 @@
         eval "$(zoxide init zsh)"
         export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
       '';
-      };
+    };
 
     programs.starship = {
       enable   = true;

@@ -1,16 +1,16 @@
-{ ... }:
+{ isDarwin, ... }:
 {
-  # agenix secret declarations for the OptiPlex.
-  # Secrets are decrypted at activation using the host's SSH key.
-  # Encrypted .age files live in secrets/ — never commit plaintext.
-  #
-  # Workflow: edit secrets/secrets.nix to add public keys, then:
-  #   cd ~/nix-config/secrets && agenix -e secret-name.age
+  # agenix secret declarations for the OptiPlex and Mac.
+  # On Mac, we use the user's SSH key for decryption.
+  age.identityPaths = if isDarwin 
+    then [ "/Users/lorcan/.ssh/id_ed25519" ]
+    else [ "/etc/ssh/ssh_host_ed25519_key" ];
 
   age.secrets = {
     fmp-api-key = {
-      file = ../secrets/fmp-api-key.age;
-      mode = "0400";
+      file  = ../secrets/fmp-api-key.age;
+      mode  = "0400";
+      owner = "lorcan";
     };
   };
 }
