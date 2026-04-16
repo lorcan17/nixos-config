@@ -12,4 +12,5 @@ let
   optiplex = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOcv94KIQ5JhrNxXmLcDByuCAmxu2h59sGYpzk87RQzy root@optiplex";
 in {
   "fmp-api-key.age".publicKeys       = [ lorcan optiplex ];
+  "tailscale-authkey.age".publicKeys = [ lorcan optiplex ];
 }

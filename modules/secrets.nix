@@ -12,5 +12,10 @@
       mode  = "0400";
       owner = "lorcan";
     };
+    tailscale-authkey = {
+      file = ../secrets/tailscale-authkey.age;
+      mode = "0400";
+      # owner defaults to root; tailscaled reads this at daemon start
+    };
   };
 }
