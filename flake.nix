@@ -13,6 +13,7 @@
 
     darwinConfigurations."lorcans-mac" = nix-darwin.lib.darwinSystem {
       system = "aarch64-darwin";
+      specialArgs = { isDarwin = true; };
       modules = [
         home-manager.darwinModules.home-manager
         { home-manager.useGlobalPkgs = true; home-manager.useUserPackages = true; }
@@ -43,6 +44,7 @@
     # layered in one at a time via nixos-rebuild test once this base works.
     nixosConfigurations.optiplex = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
+      specialArgs = { isDarwin = false; };
       modules = [
         home-manager.nixosModules.home-manager
         { home-manager.useGlobalPkgs = true; home-manager.useUserPackages = true; }

@@ -1,4 +1,4 @@
-{ pkgs, lib, ... }:
+{ lib, isDarwin, ... }:
 {
   # Cross-platform: SSH *client* config via home-manager
   home-manager.users.lorcan = {
@@ -22,9 +22,8 @@
     };
   };
 }
-# NixOS-only: sshd + firewall. networking.firewall doesn't exist on nix-darwin
-# so the option path must be structurally absent on Darwin.
-// lib.optionalAttrs pkgs.stdenv.isLinux {
+# NixOS-only: sshd + firewall. networking.firewall doesn't exist on nix-darwin.
+// lib.optionalAttrs (!isDarwin) {
   services.openssh = {
     enable = true;
     settings = {
