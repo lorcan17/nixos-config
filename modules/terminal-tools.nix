@@ -19,6 +19,7 @@
 
       # Misc
       unzip
+      nodejs_24
     ];
   };
 }

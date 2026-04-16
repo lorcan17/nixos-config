@@ -24,9 +24,6 @@
 
       # Render Mermaid diagrams from CLI (architecture docs)
       mermaid-cli
-
-      # Claude Code — installed via npm, managed outside nixpkgs due to rapid release cycle
-      nodejs_22
     ];
   };
 }
