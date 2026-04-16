@@ -54,6 +54,7 @@
         # Core (cross-platform)
         ./modules/nix-settings.nix
         ./modules/lorcan.nix
+        ./modules/secrets.nix
 
         # Shell and tools (home-manager; cross-platform)
         ./modules/git.nix
@@ -68,7 +69,7 @@
 
         # Layer in after base boot is working:
         # ./modules/tailscale.nix
-        # ./modules/ollama.nix
+        ./modules/ollama.nix
         # ./modules/openclaw.nix
         # ./modules/open-webui.nix
         # ./modules/docker.nix
