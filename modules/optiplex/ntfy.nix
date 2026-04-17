@@ -3,9 +3,8 @@
   services.ntfy-sh = {
     enable = true;
     settings = {
-      base-url        = "https://ntfy.{$DOMAIN}";
-      listen-http     = ":2586";
-      behind-proxy    = true;
+      listen-http         = ":2586";
+      behind-proxy        = true;
       auth-default-access = "allow-all";
     };
   };
