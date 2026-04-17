@@ -6,6 +6,24 @@
 
 ---
 
+## 2026-04-16 — Per-service Caddy vhost blocks (not a shared wildcard matcher)
+
+**Context:** Caddy landed on OptiPlex serving the apex domain, substituting `{$DOMAIN}` from an agenix secret via `EnvironmentFile`. Next step is adding service verticals (Ghostfolio, Open-WebUI, Ollama UI, etc.), each wanting its own subdomain. Needed a default for how subdomain routing is structured before writing the first one.
+
+**Decision:** Each service module declares its own Caddy vhost for its subdomain, e.g. `services.caddy.virtualHosts."ghostfolio.{$DOMAIN}".extraConfig = ...` inside `modules/optiplex/ghostfolio.nix`. No shared wildcard vhost and no central matcher file.
+
+**Rationale:**
+- **Matches the Dendritic "one file per feature" rule** already set in CLAUDE.md — adding a service is a single new file, nothing else changes.
+- **Grep-friendly debugging:** `grep -r virtualHosts modules/optiplex/` lists every subdomain and where it lives.
+- **Clean removal:** deleting a service deletes its module and its routing goes with it — no orphan matcher lines to hunt down.
+- **Rejected alternative:** one `*.{$DOMAIN}` vhost with a `@host` matcher routing each subdomain to its upstream. Fewer total lines but every service addition edits a shared file, which is exactly the coupling the module split was done to avoid.
+
+**Consequences:** ~3 extra lines of boilerplate per service (a `virtualHosts."sub.{$DOMAIN}"` block) — accepted as the cost of module self-containment. `modules/optiplex/caddy.nix` stays minimal (just the daemon + agenix secret + firewall); it does not grow as services are added.
+
+**Revisit if:** we ever need per-path routing inside a single subdomain, tight shared middleware (auth, rate-limit) across many services, or Caddy's evaluation of N vhosts starts to hurt on reload — at which point a matcher-based shared block or a separate proxy layer (e.g. Traefik) earns its keep.
+
+---
+
 ## 2026-04-16 — agenix on both Mac and OptiPlex
 
 **Context:** Need a single secret-management pattern that works across nix-darwin (Mac) and NixOS (OptiPlex) without introducing a second system.

@@ -120,6 +120,7 @@ Full ADR-lite entries with reasoning live in [DECISIONS.md](./DECISIONS.md). Thi
 
 | Date | Decision |
 |---|---|
+| 2026-04-16 | Per-service Caddy vhost blocks (not a shared wildcard matcher) |
 | 2026-04-16 | agenix on both Mac and OptiPlex |
 | 2026-04-16 | Module subdirectories with auto-import (shared / mac / optiplex / wip) |
 | 2026-04-16 | Keep Mullvad separate from Tailscale exit nodes |
