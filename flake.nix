@@ -5,10 +5,12 @@
     nixpkgs.url     = "github:NixOS/nixpkgs/nixos-unstable";
     nix-darwin      = { url = "github:LnL7/nix-darwin"; inputs.nixpkgs.follows = "nixpkgs"; };
     home-manager    = { url = "github:nix-community/home-manager"; inputs.nixpkgs.follows = "nixpkgs"; };
-    agenix          = { url = "github:ryantm/agenix"; inputs.nixpkgs.follows = "nixpkgs"; };
+    agenix             = { url = "github:ryantm/agenix"; inputs.nixpkgs.follows = "nixpkgs"; };
+    questrade-extract  = { url = "github:lorcan17/questrade-extract"; flake = false; };
+    finance-digest     = { url = "github:lorcan17/finance-digest"; flake = false; };
   };
 
-  outputs = { self, nixpkgs, nix-darwin, home-manager, agenix }:
+  outputs = { self, nixpkgs, nix-darwin, home-manager, agenix, questrade-extract, finance-digest }:
     let
       # Auto-import every .nix file directly inside `dir` (non-recursive).
       # Used to route modules/{shared,mac,optiplex}/* into the right host.
@@ -35,7 +37,7 @@
 
     nixosConfigurations.optiplex = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
-      specialArgs = { inherit agenix; isDarwin = false; };
+      specialArgs = { inherit agenix; isDarwin = false; inherit questrade-extract finance-digest; };
       modules = [
         home-manager.nixosModules.home-manager
         agenix.nixosModules.default

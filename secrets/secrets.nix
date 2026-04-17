@@ -13,7 +13,8 @@ let
 in {
   "fmp-api-key.age".publicKeys             = [ lorcan optiplex ];
   "tailscale-authkey.age".publicKeys       = [ lorcan optiplex ];
-  "domain-name.age".publicKeys             = [ lorcan optiplex ];
+  "caddy-domain.age".publicKeys            = [ lorcan optiplex ];
+  "domain.age".publicKeys                  = [ lorcan optiplex ];
   "mullvad-wg-config.age".publicKeys       = [ lorcan optiplex ];
   "questrade-consumer-key.age".publicKeys  = [ lorcan optiplex ];
   "anthropic-api-key.age".publicKeys       = [ lorcan optiplex ];

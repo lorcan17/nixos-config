@@ -13,8 +13,8 @@
   # If another service ever needs the domain, rename to something less generic
   # (e.g. `caddy-domain`) and introduce a separate secret for the new consumer —
   # don't share this one, since ownership/mode are tuned for the caddy daemon.
-  age.secrets.domain-name = {
-    file  = ../../secrets/domain-name.age;
+  age.secrets.caddy-domain = {
+    file  = ../../secrets/caddy-domain.age;
     mode  = "0400";
     owner = "caddy";
     group = "caddy";
@@ -29,7 +29,7 @@
   };
 
   systemd.services.caddy.serviceConfig.EnvironmentFile =
-    config.age.secrets.domain-name.path;
+    config.age.secrets.caddy-domain.path;
 
   networking.firewall.allowedTCPPorts = [ 80 443 ];
 }

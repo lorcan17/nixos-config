@@ -27,7 +27,7 @@
       mode = "0400";
       # owner defaults to root; tailscaled reads this at daemon start
     };
-    # domain-name is declared in modules/optiplex/caddy.nix — only needed there,
-    # and must be owned by the `caddy` user (which doesn't exist on Mac).
+    # caddy-domain is declared in modules/optiplex/caddy.nix — caddy-owned, not cross-platform.
+    # domain is declared in modules/optiplex/finance.nix — bare domain for service URL construction.
   };
 }
