@@ -66,17 +66,25 @@ def safe_filename(text: str, max_len: int = 60) -> str:
 # TTS
 # ---------------------------------------------------------------------------
 
-def tts_chunk(text: str, voice: str, output_path: Path) -> None:
-    r = requests.post(
-        KOKORO_URL,
-        json={"model": "kokoro", "input": text, "voice": voice, "response_format": "mp3"},
-        stream=True,
-        timeout=300,
-    )
-    r.raise_for_status()
-    with open(output_path, "wb") as f:
-        for chunk in r.iter_content(8192):
-            f.write(chunk)
+def tts_chunk(text: str, voice: str, output_path: Path, retries: int = 3) -> None:
+    for attempt in range(retries):
+        try:
+            r = requests.post(
+                KOKORO_URL,
+                json={"model": "kokoro", "input": text, "voice": voice, "response_format": "mp3"},
+                stream=True,
+                timeout=300,
+            )
+            r.raise_for_status()
+            with open(output_path, "wb") as f:
+                for chunk in r.iter_content(8192):
+                    f.write(chunk)
+            return
+        except Exception as e:
+            if attempt + 1 == retries:
+                raise
+            print(f"    retrying ({attempt+1}/{retries-1}): {e}", flush=True)
+            import time; time.sleep(5)
 
 
 # ---------------------------------------------------------------------------
@@ -292,22 +300,32 @@ def make_gutenberg_book(book_id: int, voice: str) -> None:
     BOOKS_DIR.mkdir(parents=True, exist_ok=True)
     output_path = BOOKS_DIR / f"{safe_filename(metadata['title'])}.m4b"
 
-    with tempfile.TemporaryDirectory() as tmp:
-        tmp = Path(tmp)
+    # Persistent cache survives crashes — re-runs skip completed chunks
+    cache_dir = Path(f"/tmp/audiobook-{book_id}")
+    cache_dir.mkdir(exist_ok=True)
+
+    try:
         chapter_audio = []
         for i, ch in enumerate(chapters):
             print(f"  [{i+1}/{len(chapters)}] {ch['title']}")
             chunks = chunk_text(text[ch["start"]:ch["end"]])
             chunk_paths = []
             for j, chunk in enumerate(chunks):
-                print(f"    chunk {j+1}/{len(chunks)} ({len(chunk)} chars)", flush=True)
-                path = tmp / f"ch{i:03d}_{j:03d}.mp3"
-                tts_chunk(chunk, voice, path)
+                path = cache_dir / f"ch{i:03d}_{j:03d}.mp3"
+                if path.exists() and path.stat().st_size > 0:
+                    print(f"    chunk {j+1}/{len(chunks)} (cached)", flush=True)
+                else:
+                    print(f"    chunk {j+1}/{len(chunks)} ({len(chunk)} chars)", flush=True)
+                    tts_chunk(chunk, voice, path)
                 chunk_paths.append(path)
             chapter_audio.append((ch["title"], chunk_paths))
 
         print(f"Assembling {output_path.name}...")
         assemble_m4b(chapter_audio, metadata, cover, output_path)
+    finally:
+        # Clean up cache only on success (leave it on failure for resumption)
+        if output_path.exists():
+            import shutil; shutil.rmtree(cache_dir, ignore_errors=True)
 
     print(f"Done → {output_path}")
 
