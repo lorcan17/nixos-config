@@ -1,6 +1,6 @@
 # nix-config — Project Status
 
-> Living doc. Update when modules land or plans change. Last updated: 2026-04-17 (audiobook pipeline modules written).
+> Living doc. Update when modules land or plans change. Last updated: 2026-04-17 (finance pipeline built; ntfy TLS pending).
 
 ---
 
@@ -29,13 +29,18 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 
 | Secret | Hosts | Purpose |
 |---|---|---|
-| `fmp-api-key` | Mac + OptiPlex | Financial Modelling Prep API, exported as `$FMP_API_KEY` in zsh |
+| `fmp-api-key` | Mac + OptiPlex | Financial Modelling Prep API |
 | `tailscale-authkey` | OptiPlex | Reusable auth key consumed by `tailscaled` at daemon start |
-| `domain-name` | OptiPlex | **Caddy-only** (env-file format, `DOMAIN=...`). Rename if another service ever needs the domain — don't share. |
-| `mullvad-wg-config` | OptiPlex | Single WireGuard `.conf` (Sweden exit) consumed by `vpn.nix` inside the `wg-mullvad` netns. |
+| `caddy-domain` | OptiPlex | **Caddy-only** (env-file format, `DOMAIN=...`). |
+| `domain` | OptiPlex | Bare domain string for service URL construction (e.g. ntfy URL) |
+| `mullvad-wg-config` | OptiPlex | WireGuard `.conf` (Sweden exit) consumed by `vpn.nix` |
+| `questrade-consumer-key` | Mac + OptiPlex | Questrade OAuth app consumer key (bootstrap only) |
+| `anthropic-api-key` | Mac + OptiPlex | Claude API for agentic pipelines |
+
+**Not in agenix (rotating credential):**
+- Questrade refresh token — writable file at `~/.config/questrade/token` per machine; rotated automatically on each run
 
 **Planned:**
-- `anthropic-api-key` — hybrid LLM offload for heavy reasoning
 - `openai-api-key` — premium TTS for audiobooks (per-book opt-in)
 
 ---
@@ -56,6 +61,9 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | Audiobook pipeline | `audiobook.nix` + `audiobook.py` | ⚠ Untested | CPU too slow for books; articles viable; needs paid TTS or better hardware for books |
 | Whisper.cpp | `whisper.nix` | ⬜ Not started | STT for meeting transcription |
 | Ghostfolio | `ghostfolio.nix` | ✅ Running | Docker Compose + Caddy vhost; uses existing `fmp-api-key` agenix secret |
+| ntfy | `ntfy.nix` | ⚠️ TLS blocked | Service runs on :2586 behind Caddy; mobile app requires valid HTTPS cert — blocked on Caddy TLS decision (see DECISIONS.md) |
+| questrade-extract | `finance.nix` | ✅ Timer registered | Runs Mon-Fri 16:30 Vancouver; writes to `/var/lib/questrade-extract/questrade.db`; token at `~/.config/questrade/token` |
+| finance-digest | `finance.nix` | ✅ Timer registered | Runs Mon-Fri 17:00 Vancouver; reads DB → Claude → ntfy; blocked on ntfy TLS |
 | Monitoring | `monitoring.nix` | ⬜ Not started | Low-effort visibility win |
 | Backups | `backups.nix` | ⬜ Not started | Restic or borgbackup |
 | Syncthing | `syncthing.nix` | ⬜ Not started | Mac ↔ OptiPlex file sync |
@@ -86,8 +94,10 @@ _Nothing currently in progress._
 
 ### Tier 3 — Finance stack
 - [x] **Ghostfolio** — running; `$FMP_API_KEY` wired via agenix. _(landed 2026-04-17)_
+- [x] **questrade-extract** — daily systemd timer pulls balances + positions from Questrade API → SQLite at `/var/lib/questrade-extract/questrade.db`. Repo: `github:lorcan17/questrade-extract`. _(landed 2026-04-17)_
+- [x] **finance-digest** — daily systemd timer reads DB → Claude analysis → ntfy push. Repo: `github:lorcan17/finance-digest`. Blocked on ntfy TLS. _(landed 2026-04-17)_
+- [ ] **Caddy TLS** — required to unblock ntfy mobile push. Options: DNS-01 challenge (needs DNS provider API token) or expose port 80/443 publicly for HTTP-01. Decision pending.
 - [ ] **LLM portfolio updater** — Python job: broker CSV/PDF from a Syncthing folder → Claude API extracts activities → POST to Ghostfolio `/api/v1/order`.
-- [ ] **Daily investment digest** — cron + Claude API: pull positions from Ghostfolio → prose summary → email or push to Obsidian.
 - [ ] **Bank PDF → Sure pipeline** — bank statement PDF → n8n workflow → LLM extracts transactions → structured JSON → Sure Import API. Sure is self-hosted. Consider routing bank PDFs through Paperless-ngx first (OCR + archival) before n8n picks them up.
 - [ ] **LangAlpha** — multi-agent equity research stack (LangGraph + MongoDB + Playwright + paid APIs, ~$30–80/mo realistic). Defer until finance basics are stable and Docker/Tailscale are bedded in.
 

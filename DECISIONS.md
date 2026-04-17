@@ -156,6 +156,65 @@
 
 ---
 
+## 2026-04-17 — One repo per pipeline (modular, not monolith)
+
+**Context:** Building a finance automation stack (Questrade extract, daily digest). Question was whether to use one shared repo or separate repos per pipeline.
+
+**Decision:** One repo per pipeline. `questrade-extract` owns data fetching, `finance-digest` owns analysis and delivery. Both are flake inputs in `nix-config` (`flake = false`).
+
+**Rationale:** Each pipeline has a distinct job, different deps, different schedules, and different failure modes. Separate repos evolve independently — updating the digest prompt doesn't require touching the extract logic. A future bank PDF extractor, Wealthsimple extractor, etc. all become their own repos writing to the same shared SQLite.
+
+**Consequences:** `flake.nix` needs updating when a new pipeline repo is added (the one case where `flake.nix` must be edited). Each repo is packaged via `python3.withPackages` in `finance.nix` — no uv or Docker at runtime.
+
+**Revisit if:** the number of pipeline repos grows unwieldy, or a shared library emerges that would benefit from a monorepo.
+
+---
+
+## 2026-04-17 — Private GitHub repos for pipelines not worth it
+
+**Context:** `questrade-extract` and `finance-digest` repos were initially created as private. OptiPlex needed to fetch them as flake inputs, which requires auth (GitHub PAT or deploy keys) since Nix uses HTTPS for `github:` inputs.
+
+**Decision:** Make both repos public. Auth complexity (PAT in nix.conf, or deploy key per repo) is not justified.
+
+**Rationale:** The scripts contain no secrets — all credentials are in agenix or `~/.config/questrade/token`. Portfolio data lives in the SQLite DB on OptiPlex, not in the repo. The only "sensitive" content would be ticker names visible in comments, which is not a meaningful exposure.
+
+**Consequences:** Anyone can read the pipeline code. Secrets are never in the repo — enforced by `.gitignore` and agenix.
+
+**Revisit if:** a pipeline repo must embed anything sensitive (e.g. hardcoded account IDs, strategy logic you want private), at which point a GitHub PAT in `nix.settings.access-tokens` is the clean fix.
+
+---
+
+## 2026-04-17 — Questrade refresh token as writable file, not agenix
+
+**Context:** Questrade uses rotating OAuth tokens — each use of the refresh token yields a new refresh token. Needed a storage strategy for this credential.
+
+**Decision:** Store the refresh token at `~/.config/questrade/token` (mode 600) as a JSON file. Each pipeline run refreshes the token and writes the new one back. Not managed by agenix.
+
+**Rationale:** agenix secrets are read-only at runtime (decrypted to a protected file at activation). A rotating credential must be writable by the script. One token file per machine; each machine registers a separate Questrade app so tokens rotate independently.
+
+**Consequences:** Not declarative — the file must be seeded manually once per machine. If the token expires (no run for 30 days), re-seed by generating a new manual auth token in Questrade API Centre and calling the token endpoint once. The script prints clear re-seed instructions on auth failure.
+
+**Revisit if:** Questrade introduces a non-rotating long-lived credential, or we find a clean NixOS pattern for writable secrets.
+
+---
+
+## 2026-04-17 — Caddy TLS strategy for self-hosted services (pending)
+
+**Context:** Caddy is running with `tls internal` (self-signed cert). This works for browser click-through but is rejected by mobile apps (ntfy, etc.) and is non-standard for anything requiring trusted HTTPS.
+
+**Decision:** Pending. Two options under consideration:
+
+1. **DNS-01 challenge** — Caddy requests a Let's Encrypt cert via DNS TXT record. Requires a DNS provider API token as an agenix secret. Works behind Tailscale/NAT with no port exposure. Supported by most providers (Cloudflare, etc.).
+2. **HTTP-01 challenge** — Caddy requests a cert via port 80. Requires port 80/443 publicly reachable. Simpler config but exposes the OptiPlex publicly.
+
+**Rationale for deferring:** Neither option is trivially wrong. DNS-01 is cleaner (no public exposure) but requires identifying the DNS provider and obtaining an API token. Chosen to defer rather than rush a decision that affects all services.
+
+**Consequences of deferring:** ntfy push notifications to mobile are blocked. Caddy subdomains only usable in browsers (with click-through warning) or via Tailscale clients that trust the internal CA.
+
+**Revisit if:** ntfy or any other mobile-facing service becomes a priority — at that point DNS-01 is the recommended path.
+
+---
+
 ## 2026-04-16 — Facebook Marketplace out of scope for the car-hunt agent
 
 **Context:** Planning an LLM-assisted car-shopping agent. Facebook Marketplace and Craigslist are the two obvious sources.
