@@ -24,6 +24,11 @@ in {
     # owner defaults to root; the systemd unit below runs as root.
   };
 
+  # Make `wg`, `wg-quick` available for interactive diagnostics inside the netns
+  # (e.g. `sudo ip netns exec wg-mullvad wg show`). The unit itself uses its own
+  # `path =` and doesn't depend on this.
+  environment.systemPackages = [ pkgs.wireguard-tools ];
+
   systemd.services.wg-mullvad = {
     description = "Mullvad WireGuard tunnel inside ${ns} netns";
     wantedBy    = [ "multi-user.target" ];
@@ -57,8 +62,12 @@ in {
       ip link add wg0 type wireguard
       ip link set wg0 netns ${ns}
 
-      # 4. apply wg config (strip drops Address/DNS — those are not wg keys)
-      ip netns exec ${ns} wg setconf wg0 <(wg-quick strip "$conf")
+      # 4. apply wg config — strip wg-quick-only keys ourselves, since
+      # `wg-quick strip` refuses any filename that doesn't end in `.conf`
+      # (and the agenix-decrypted file lives at /run/agenix/mullvad-wg-config).
+      ip netns exec ${ns} wg setconf wg0 <(
+        sed -E '/^[[:space:]]*(Address|DNS|MTU|Table|PreUp|PostUp|PreDown|PostDown|SaveConfig|FwMark)[[:space:]]*=/d' "$conf"
+      )
 
       # 5. address(es) on wg0 inside the netns (mullvad gives v4 + v6)
       for addr in $(grep '^Address' "$conf" | sed 's/^Address *= *//' | tr ',' ' '); do
