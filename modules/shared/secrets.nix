@@ -17,6 +17,11 @@
       mode  = "0400";
       owner = "lorcan";
     };
+    anthropic-api-key = {
+      file  = ../../secrets/anthropic-api-key.age;
+      mode  = "0400";
+      owner = "lorcan";
+    };
     tailscale-authkey = {
       file = ../../secrets/tailscale-authkey.age;
       mode = "0400";

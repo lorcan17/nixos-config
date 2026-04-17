@@ -16,4 +16,5 @@ in {
   "domain-name.age".publicKeys             = [ lorcan optiplex ];
   "mullvad-wg-config.age".publicKeys       = [ lorcan optiplex ];
   "questrade-consumer-key.age".publicKeys  = [ lorcan optiplex ];
+  "anthropic-api-key.age".publicKeys       = [ lorcan optiplex ];
 }
