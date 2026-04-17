@@ -18,10 +18,12 @@
       ExecStop     = "${pkgs.docker}/bin/docker stop kokoro";
     };
 
+    # Bind to all interfaces so Tailscale peers (Mac) can reach it directly.
+    # No public firewall rule — Tailscale ACLs are the perimeter.
     script = ''
       exec docker run --rm \
         --name kokoro \
-        -p 127.0.0.1:8880:8880 \
+        -p 8880:8880 \
         ghcr.io/remsky/kokoro-fastapi-cpu:latest
     '';
   };

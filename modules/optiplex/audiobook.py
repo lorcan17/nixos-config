@@ -10,6 +10,7 @@ Usage:
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -22,9 +23,12 @@ import requests
 from bs4 import BeautifulSoup
 from readability import Document
 
-KOKORO_URL  = "http://localhost:8880/v1/audio/speech"
-BOOKS_DIR   = Path("/var/lib/audiobooks/books")
-PODS_DIR    = Path("/var/lib/audiobooks/podcasts")
+# Override with env vars to run from Mac against OptiPlex:
+#   KOKORO_URL=http://optiplex:8880/v1/audio/speech
+#   AUDIOBOOKS_DIR=~/audiobooks
+KOKORO_URL  = os.environ.get("KOKORO_URL", "http://localhost:8880/v1/audio/speech")
+BOOKS_DIR   = Path(os.environ.get("AUDIOBOOKS_DIR", "/var/lib/audiobooks/books"))
+PODS_DIR    = Path(os.environ.get("PODCASTS_DIR",   "/var/lib/audiobooks/podcasts"))
 CHUNK_CHARS = 1500  # chars per TTS call — keeps latency manageable
 
 GUTENBERG_NS = {
@@ -296,6 +300,7 @@ def make_gutenberg_book(book_id: int, voice: str) -> None:
             chunks = chunk_text(text[ch["start"]:ch["end"]])
             chunk_paths = []
             for j, chunk in enumerate(chunks):
+                print(f"    chunk {j+1}/{len(chunks)} ({len(chunk)} chars)", flush=True)
                 path = tmp / f"ch{i:03d}_{j:03d}.mp3"
                 tts_chunk(chunk, voice, path)
                 chunk_paths.append(path)
@@ -323,7 +328,7 @@ def make_article(url: str, voice: str) -> None:
         tmp = Path(tmp)
         chunk_paths = []
         for i, chunk in enumerate(chunks):
-            print(f"  Chunk {i+1}/{len(chunks)}")
+            print(f"  Chunk {i+1}/{len(chunks)} ({len(chunk)} chars)", flush=True)
             path = tmp / f"chunk{i:03d}.mp3"
             tts_chunk(chunk, voice, path)
             chunk_paths.append(path)
