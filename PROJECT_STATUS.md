@@ -47,13 +47,13 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | Ollama | `ollama.nix` | ✅ Running | CPU-only, `0.0.0.0:11434` |
 | Tailscale | `tailscale.nix` | ✅ Running | Auth key via agenix; unblocks most other services |
 | Mullvad + WireGuard | `vpn.nix` | ✅ Running | `wg-mullvad` netns, Sweden exit; consumers join via `NetworkNamespacePath` |
-| Torrenting | `torrenting.nix` | ⬜ Not started | Transmission inside `wg-mullvad` netns |
-| Docker | `docker.nix` | ⬜ Not started | Accepted as required (Ghostfolio, LangAlpha, Immich are Docker-only) |
-| Caddy reverse proxy | `caddy.nix` | ⬜ Not started | Depends on Tailscale + domain secret |
+| Torrenting | `torrenting.nix` | ✅ Module written | Transmission inside `wg-mullvad` netns; RPC on 127.0.0.1:9091 |
+| Docker | `docker.nix` | ✅ Module written | autoPrune enabled; lorcan in docker group |
+| Caddy reverse proxy | `caddy.nix` | ✅ Running | Root + subdomain verified |
 | Open-WebUI | `open-webui.nix` | ⬜ Not started | Depends on Ollama + reverse proxy |
 | Kokoro TTS | `kokoro.nix` | ⬜ Not started | Shared engine for audiobook/article pipelines |
 | Whisper.cpp | `whisper.nix` | ⬜ Not started | STT for meeting transcription |
-| Ghostfolio | `ghostfolio.nix` | ⬜ Not started | Docker Compose; wires FMP key for market data |
+| Ghostfolio | `ghostfolio.nix` | ✅ Module written | Docker Compose + Caddy vhost; needs `ghostfolio-secrets.age` before rebuild |
 | Monitoring | `monitoring.nix` | ⬜ Not started | Low-effort visibility win |
 | Backups | `backups.nix` | ⬜ Not started | Restic or borgbackup |
 | Syncthing | `syncthing.nix` | ⬜ Not started | Mac ↔ OptiPlex file sync |
@@ -74,7 +74,7 @@ _Nothing currently in progress._
 - [x] **Domain name secret** — agenix entry so service configs don't hardcode. _(landed 2026-04-16)_
 - [x] **Mullvad + WireGuard (vpn.nix)** — WireGuard config from agenix; introduces the `wg-mullvad` netns that `torrenting.nix` will reuse. _(landed 2026-04-16, verified via am.i.mullvad.net)_
 - [ ] **Docker (docker.nix)** — accepted as necessary. Ghostfolio, LangAlpha, and likely Immich are Docker-only upstream.
-- [ ] **Caddy reverse proxy** — subdomain routing once Tailscale + domain are in.
+- [x] **Caddy reverse proxy** — subdomain routing once Tailscale + domain are in. _(verified 2026-04-16)_
 
 ### Tier 2 — First verticals (share TTS + job-runner scaffolding)
 - [ ] **Gutenberg → audiobook pipeline** — fetch from gutenberg.org → chunk → Kokoro TTS → output `.m4b`. Zero legal/API risk; proves the TTS + job-runner scaffolding end-to-end.
@@ -120,6 +120,7 @@ Full ADR-lite entries with reasoning live in [DECISIONS.md](./DECISIONS.md). Thi
 
 | Date | Decision |
 |---|---|
+| 2026-04-16 | Transmission RPC inside netns only, no veth bridge to host yet |
 | 2026-04-16 | Per-service Caddy vhost blocks (not a shared wildcard matcher) |
 | 2026-04-16 | agenix on both Mac and OptiPlex |
 | 2026-04-16 | Module subdirectories with auto-import (shared / mac / optiplex / wip) |

@@ -6,6 +6,23 @@
 
 ---
 
+## 2026-04-16 — Transmission RPC inside netns only, no veth bridge to host yet
+
+**Context:** `torrenting.nix` binds Transmission's RPC to `127.0.0.1:9091` inside the `wg-mullvad` netns. The host network (Tailscale, Caddy, future Radarr) cannot reach that address without additional plumbing. Needed an explicit decision on whether to add a veth pair now or defer it.
+
+**Decision:** Defer the host↔netns bridge until Radarr (or an equivalent *arr app) is actually being written. For now, RPC is reachable only via `sudo ip netns exec wg-mullvad transmission-remote ...` or from within the netns itself.
+
+**Rationale:**
+- Adding a veth pair adds meaningful complexity to `vpn.nix` (veth creation, IP assignment, routing rules in both directions) for zero present benefit — no consumer of the RPC exists yet.
+- The smoke tests (`am.i.mullvad.net` + curl to port 9091 from inside the netns) are sufficient to verify correctness without a bridge.
+- When Radarr arrives the options are clear: either run Radarr in the same netns, or add a veth in `vpn.nix`; either choice is a clean, bounded change.
+
+**Consequences:** Caddy cannot reverse-proxy to Transmission's RPC until the bridge exists. Any `*arr` automation tool added before the bridge must also run inside `wg-mullvad` netns (`NetworkNamespacePath`) to reach port 9091.
+
+**Revisit if:** Radarr, Sonarr, or a Caddy vhost for the Transmission web UI is added — at that point, design the veth bridge or confirm the *arr service also joins the netns.
+
+---
+
 ## 2026-04-16 — Per-service Caddy vhost blocks (not a shared wildcard matcher)
 
 **Context:** Caddy landed on OptiPlex serving the apex domain, substituting `{$DOMAIN}` from an agenix secret via `EnvironmentFile`. Next step is adding service verticals (Ghostfolio, Open-WebUI, Ollama UI, etc.), each wanting its own subdomain. Needed a default for how subdomain routing is structured before writing the first one.
