@@ -46,7 +46,7 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 |---|---|---|---|
 | Ollama | `ollama.nix` | ✅ Running | CPU-only, `0.0.0.0:11434` |
 | Tailscale | `tailscale.nix` | ✅ Running | Auth key via agenix; unblocks most other services |
-| Mullvad + WireGuard | `vpn.nix` | 🟡 Built, untested | `wg-mullvad` netns; consumers join via `NetworkNamespacePath` |
+| Mullvad + WireGuard | `vpn.nix` | ✅ Running | `wg-mullvad` netns, Sweden exit; consumers join via `NetworkNamespacePath` |
 | Torrenting | `torrenting.nix` | ⬜ Not started | Transmission inside `wg-mullvad` netns |
 | Docker | `docker.nix` | ⬜ Not started | Accepted as required (Ghostfolio, LangAlpha, Immich are Docker-only) |
 | Caddy reverse proxy | `caddy.nix` | ⬜ Not started | Depends on Tailscale + domain secret |
@@ -72,7 +72,7 @@ _Nothing currently in progress._
 ### Tier 1 — Foundations (unblock everything else)
 - [x] **Tailscale** — VPN mesh; prerequisite for anything reachable off-LAN. _(landed 2026-04-16)_
 - [x] **Domain name secret** — agenix entry so service configs don't hardcode. _(landed 2026-04-16)_
-- [x] **Mullvad + WireGuard (vpn.nix)** — WireGuard config from agenix; introduces the `wg-mullvad` netns that `torrenting.nix` will reuse. _(landed 2026-04-16, smoke test pending)_
+- [x] **Mullvad + WireGuard (vpn.nix)** — WireGuard config from agenix; introduces the `wg-mullvad` netns that `torrenting.nix` will reuse. _(landed 2026-04-16, verified via am.i.mullvad.net)_
 - [ ] **Docker (docker.nix)** — accepted as necessary. Ghostfolio, LangAlpha, and likely Immich are Docker-only upstream.
 - [ ] **Caddy reverse proxy** — subdomain routing once Tailscale + domain are in.
 
@@ -111,7 +111,6 @@ _Nothing currently in progress._
 |---|---|---|
 | Ollama not yet verified | OptiPlex | `services.ollama.host`/`port` options added but not tested post-switch |
 | Mac agenix not verified | Mac | First activation with `isDarwin` identity path not yet tested |
-| Mullvad netns not yet verified | OptiPlex | After switch, run `sudo ip netns exec wg-mullvad curl -s https://am.i.mullvad.net/json` — expect `mullvad_exit_ip: true` |
 
 ---
 
