@@ -81,7 +81,7 @@ _Nothing currently in progress._
 ### Tier 2 — First verticals (share TTS + job-runner scaffolding)
 - [ ] **Gutenberg → audiobook pipeline** — `make-audiobook --gutenberg ID`; Kokoro TTS → `.m4b` with chapters + cover + metadata → Audiobookshelf. Module written; needs `nixos-rebuild switch` on optiplex then first test run.
 - [ ] **Article → audio briefing** — `make-audiobook --url URL`; same pipeline, outputs `.mp3` to podcasts dir. Module written; same rebuild.
-- [ ] **Meeting transcription + summary** — Mac captures audio (BlackHole + capture script) → Syncthing to OptiPlex → whisper.cpp transcribes → Claude API summarises → markdown into Obsidian vault. All meetings are two-party (me + business partner) with consent.
+- [ ] **Meeting transcription + summary** — Drop audio file into a watched folder (Syncthing or scp); OptiPlex: Whisper.cpp transcribes → Claude API summarises → delivers text summary (email or push). Optional second pass: Kokoro TTS reads the summary back as an audio file. Mac doesn't need to be on — OptiPlex runs the whole pipeline headlessly. Needs: Whisper.cpp module, Claude API agenix secret, delivery mechanism (email vs push vs Obsidian). Needs more thought before building.
 - [ ] **Torrenting (torrenting.nix)** — Transmission in `wg-mullvad` netns. Enables public-domain audiobook downloads safely.
 
 ### Tier 3 — Finance stack
