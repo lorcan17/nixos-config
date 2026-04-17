@@ -1,6 +1,6 @@
 # nix-config — Project Status
 
-> Living doc. Update when modules land or plans change. Last updated: 2026-04-16.
+> Living doc. Update when modules land or plans change. Last updated: 2026-04-17 (audiobook pipeline modules written).
 
 ---
 
@@ -48,12 +48,14 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | Tailscale | `tailscale.nix` | ✅ Running | Auth key via agenix; unblocks most other services |
 | Mullvad + WireGuard | `vpn.nix` | ✅ Running | `wg-mullvad` netns, Sweden exit; consumers join via `NetworkNamespacePath` |
 | Torrenting | `torrenting.nix` | ✅ Module written | Transmission inside `wg-mullvad` netns; RPC on 127.0.0.1:9091 |
-| Docker | `docker.nix` | ✅ Module written | autoPrune enabled; lorcan in docker group |
+| Docker | `docker.nix` | ✅ Running | autoPrune enabled; lorcan in docker group |
 | Caddy reverse proxy | `caddy.nix` | ✅ Running | Root + subdomain verified |
 | Open-WebUI | `open-webui.nix` | ⬜ Not started | Depends on Ollama + reverse proxy |
-| Kokoro TTS | `kokoro.nix` | ⬜ Not started | Shared engine for audiobook/article pipelines |
+| Kokoro TTS | `kokoro.nix` | ✅ Module written | Docker (CPU); API on 127.0.0.1:8880 |
+| Audiobookshelf | `audiobookshelf.nix` | ✅ Module written | Native NixOS service; Caddy vhost abs.{$DOMAIN} |
+| Audiobook pipeline | `audiobook.nix` + `audiobook.py` | ✅ Module written | `make-audiobook --gutenberg ID` or `--url URL`; outputs to /var/lib/audiobooks |
 | Whisper.cpp | `whisper.nix` | ⬜ Not started | STT for meeting transcription |
-| Ghostfolio | `ghostfolio.nix` | ✅ Module written | Docker Compose + Caddy vhost; needs `ghostfolio-secrets.age` before rebuild |
+| Ghostfolio | `ghostfolio.nix` | ✅ Running | Docker Compose + Caddy vhost; uses existing `fmp-api-key` agenix secret |
 | Monitoring | `monitoring.nix` | ⬜ Not started | Low-effort visibility win |
 | Backups | `backups.nix` | ⬜ Not started | Restic or borgbackup |
 | Syncthing | `syncthing.nix` | ⬜ Not started | Mac ↔ OptiPlex file sync |
@@ -73,19 +75,20 @@ _Nothing currently in progress._
 - [x] **Tailscale** — VPN mesh; prerequisite for anything reachable off-LAN. _(landed 2026-04-16)_
 - [x] **Domain name secret** — agenix entry so service configs don't hardcode. _(landed 2026-04-16)_
 - [x] **Mullvad + WireGuard (vpn.nix)** — WireGuard config from agenix; introduces the `wg-mullvad` netns that `torrenting.nix` will reuse. _(landed 2026-04-16, verified via am.i.mullvad.net)_
-- [ ] **Docker (docker.nix)** — accepted as necessary. Ghostfolio, LangAlpha, and likely Immich are Docker-only upstream.
+- [x] **Docker (docker.nix)** — deployed. _(landed 2026-04-17)_
 - [x] **Caddy reverse proxy** — subdomain routing once Tailscale + domain are in. _(verified 2026-04-16)_
 
 ### Tier 2 — First verticals (share TTS + job-runner scaffolding)
-- [ ] **Gutenberg → audiobook pipeline** — fetch from gutenberg.org → chunk → Kokoro TTS → output `.m4b`. Zero legal/API risk; proves the TTS + job-runner scaffolding end-to-end.
-- [ ] **Article → audio briefing** — RSS/URL → Readability extraction → Kokoro → single daily podcast file. Reuses the pipeline above.
+- [ ] **Gutenberg → audiobook pipeline** — `make-audiobook --gutenberg ID`; Kokoro TTS → `.m4b` with chapters + cover + metadata → Audiobookshelf. Module written; needs `nixos-rebuild switch` on optiplex then first test run.
+- [ ] **Article → audio briefing** — `make-audiobook --url URL`; same pipeline, outputs `.mp3` to podcasts dir. Module written; same rebuild.
 - [ ] **Meeting transcription + summary** — Mac captures audio (BlackHole + capture script) → Syncthing to OptiPlex → whisper.cpp transcribes → Claude API summarises → markdown into Obsidian vault. All meetings are two-party (me + business partner) with consent.
 - [ ] **Torrenting (torrenting.nix)** — Transmission in `wg-mullvad` netns. Enables public-domain audiobook downloads safely.
 
 ### Tier 3 — Finance stack
-- [ ] **Ghostfolio** — Docker Compose; wire `$FMP_API_KEY` for market data. Accept the coupled Postgres + Redis as part of the island — don't share with NixOS-native services.
+- [x] **Ghostfolio** — running; `$FMP_API_KEY` wired via agenix. _(landed 2026-04-17)_
 - [ ] **LLM portfolio updater** — Python job: broker CSV/PDF from a Syncthing folder → Claude API extracts activities → POST to Ghostfolio `/api/v1/order`.
 - [ ] **Daily investment digest** — cron + Claude API: pull positions from Ghostfolio → prose summary → email or push to Obsidian.
+- [ ] **Bank PDF → Sure pipeline** — bank statement PDF → n8n workflow → LLM extracts transactions → structured JSON → Sure Import API. Sure is self-hosted. Consider routing bank PDFs through Paperless-ngx first (OCR + archival) before n8n picks them up.
 - [ ] **LangAlpha** — multi-agent equity research stack (LangGraph + MongoDB + Playwright + paid APIs, ~$30–80/mo realistic). Defer until finance basics are stable and Docker/Tailscale are bedded in.
 
 ### Tier 4 — PKM + household
@@ -95,7 +98,10 @@ _Nothing currently in progress._
 - [ ] **Open-WebUI** — browser frontend for Ollama.
 - [ ] **Monitoring** — Prometheus + Grafana, or Netdata.
 
-### Tier 5 — Experiments / someday
+### Tier 5 — Reliability / ops
+- [ ] **Reboot strategy (reboot.nix or ops runbook)** — OptiPlex is not always-on; services that hold state (Transmission, Ghostfolio Postgres/Redis, VPN netns) need to survive a clean reboot gracefully. Strategy to cover: (1) `wantedBy = ["multi-user.target"]` + `after/requires` ordering for netns-dependent services; (2) verify Transmission resumes correctly after `wg-mullvad` comes up; (3) decide whether a `systemd-networkd-wait-online` or `network-online.target` dependency is sufficient; (4) document manual recovery steps for a dirty shutdown; (5) optionally add a boot-time health check that pings Tailscale + Mullvad before declaring the system ready.
+
+### Tier 6 — Experiments / someday
 - [ ] **Car-hunt agent (Craigslist only)** — RSS per saved search → Claude API ranks against a spec (year, mileage, price band, Thule-box compatibility) → daily shortlist. Facebook Marketplace deliberately out of scope (anti-scraping too hostile); revisit via a Mac browser extension if needed.
 - [ ] **Home Assistant** — if smart devices appear.
 - [ ] **Backups (backups.nix)** — Restic or borgbackup for OptiPlex data.
