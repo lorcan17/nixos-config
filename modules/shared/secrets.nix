@@ -12,6 +12,11 @@
       mode  = "0400";
       owner = "lorcan";
     };
+    questrade-consumer-key = {
+      file  = ../../secrets/questrade-consumer-key.age;
+      mode  = "0400";
+      owner = "lorcan";
+    };
     tailscale-authkey = {
       file = ../../secrets/tailscale-authkey.age;
       mode = "0400";
