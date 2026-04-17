@@ -50,10 +50,10 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | Torrenting | `torrenting.nix` | ✅ Module written | Transmission inside `wg-mullvad` netns; RPC on 127.0.0.1:9091 |
 | Docker | `docker.nix` | ✅ Running | autoPrune enabled; lorcan in docker group |
 | Caddy reverse proxy | `caddy.nix` | ✅ Running | Root + subdomain verified |
-| Open-WebUI | `open-webui.nix` | ⬜ Not started | Depends on Ollama + reverse proxy |
-| Kokoro TTS | `kokoro.nix` | ✅ Module written | Docker (CPU); API on 127.0.0.1:8880 |
-| Audiobookshelf | `audiobookshelf.nix` | ✅ Module written | Native NixOS service; Caddy vhost abs.{$DOMAIN} |
-| Audiobook pipeline | `audiobook.nix` + `audiobook.py` | ✅ Module written | `make-audiobook --gutenberg ID` or `--url URL`; outputs to /var/lib/audiobooks |
+| Open-WebUI | `open-webui.nix` | ✅ Running | chat.{$DOMAIN} verified |
+| Kokoro TTS | `kokoro.nix` | ✅ Running | Docker (CPU); API on 0.0.0.0:8880 (Tailscale-accessible) |
+| Audiobookshelf | `audiobookshelf.nix` | ✅ Running | abs.{$DOMAIN} verified |
+| Audiobook pipeline | `audiobook.nix` + `audiobook.py` | ⚠ Untested | CPU too slow for books; articles viable; needs paid TTS or better hardware for books |
 | Whisper.cpp | `whisper.nix` | ⬜ Not started | STT for meeting transcription |
 | Ghostfolio | `ghostfolio.nix` | ✅ Running | Docker Compose + Caddy vhost; uses existing `fmp-api-key` agenix secret |
 | Monitoring | `monitoring.nix` | ⬜ Not started | Low-effort visibility win |
