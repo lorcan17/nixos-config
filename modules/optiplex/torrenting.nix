@@ -25,6 +25,7 @@ in {
 
   services.transmission = {
     enable          = true;
+    package         = pkgs.transmission_4;
     openRPCPort     = false; # behind netns; never expose directly to host
     settings = {
       rpc-bind-address          = "127.0.0.1";
