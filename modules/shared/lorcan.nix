@@ -15,6 +15,9 @@ in
     shell        = pkgs.zsh;
   };
 
+  # Passwordless sudo for wheel — homelab only, lorcan is the sole admin
+  security.sudo.wheelNeedsPassword = lib.mkDefault false;
+
   # home-manager entry point: who this config belongs to
   home-manager.users.lorcan = {
     home.username      = "lorcan";
