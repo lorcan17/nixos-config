@@ -1,5 +1,11 @@
-{ domain, ... }:
+{ config, domain, ... }:
 {
+  age.secrets.grafana-secret-key = {
+    file  = ../../secrets/grafana-secret-key.age;
+    mode  = "0400";
+    owner = "grafana";
+  };
+
   services.grafana = {
     enable = true;
 
@@ -10,6 +16,8 @@
         domain    = "grafana.${domain}";
         root_url  = "https://grafana.${domain}";
       };
+
+      security.secret_key = "$__file{${config.age.secrets.grafana-secret-key.path}}";
 
       # Tailscale is the perimeter — no login required on the tailnet
       "auth.anonymous" = {
