@@ -6,6 +6,23 @@
 
 ---
 
+## 2026-04-17 — Keep Caddy plugin + {$DOMAIN} env var; defer security.acme migration
+
+**Context:** `security.acme` (NixOS-native ACME via lego) was identified as an alternative to the `pkgs.caddy.withPlugins` approach — it eliminates the hash dance and requires no custom Caddy build. However, it requires the domain to be known at eval time, meaning it must appear in the `.nix` files in the public git repo.
+
+**Decision:** Keep the current `pkgs.caddy.withPlugins` + `{$DOMAIN}` environment variable approach. Do not migrate to `security.acme` now. Domain exposure in git is accepted as a known tradeoff for future review.
+
+**Rationale:**
+- The Caddy plugin hash is now stable and pinned — the hash dance is a one-time cost per version bump, not an ongoing burden.
+- `{$DOMAIN}` keeps the domain out of the public git repo, which is the current preference.
+- Migrating to `security.acme` mid-session while debugging TLS would add unnecessary churn.
+
+**Consequences:** `caddy.nix` carries a `pkgs.caddy.withPlugins` override with a pinned hash that must be updated on plugin upgrades. The `caddy-domain` agenix secret remains load-bearing. All Caddy vhosts use `{$CF_API_TOKEN}` substitution for TLS.
+
+**Revisit if:** The repo is made private (domain exposure no longer a concern), the Cloudflare plugin becomes unmaintained, or the hash dance becomes painful again after a forced plugin upgrade.
+
+---
+
 ## 2026-04-17 — Caddy TLS via Cloudflare DNS-01 (Let's Encrypt)
 
 **Context:** All Caddy vhosts were using `tls internal` (self-signed CA). Browsers click through the warning, but the ntfy mobile app rejects self-signed certs outright, blocking finance-digest push notifications. A valid TLS solution was needed.

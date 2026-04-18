@@ -136,6 +136,7 @@ Full ADR-lite entries with reasoning live in [DECISIONS.md](./DECISIONS.md). Thi
 
 | Date | Decision |
 |---|---|
+| 2026-04-17 | Keep Caddy plugin + {$DOMAIN} env var; defer security.acme migration |
 | 2026-04-17 | Caddy TLS via Cloudflare DNS-01 (Let's Encrypt) |
 | 2026-04-16 | Transmission RPC inside netns only, no veth bridge to host yet |
 | 2026-04-16 | Per-service Caddy vhost blocks (not a shared wildcard matcher) |
