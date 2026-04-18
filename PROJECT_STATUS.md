@@ -64,7 +64,7 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | ntfy | `ntfy.nix` | ⚠️ TLS pending | Service runs on :2586 behind Caddy; DNS-01 via Cloudflare wired — blocked on `cf-api-token.age` secret creation + plugin hash update |
 | questrade-extract | `finance.nix` | ✅ Timer registered | Runs Mon-Fri 16:30 Vancouver; writes to `/var/lib/questrade-extract/questrade.db`; token at `~/.config/questrade/token` |
 | finance-digest | `finance.nix` | ✅ Timer registered | Runs Mon-Fri 17:00 Vancouver; reads DB → Claude → ntfy; blocked on ntfy TLS |
-| Monitoring | `monitoring.nix` | ⬜ Not started | Low-effort visibility win |
+| Monitoring | `netdata.nix` | ⚠️ Pending rebuild | `services.netdata.enable = true`; monitor.{$DOMAIN} vhost wired |
 | Backups | `backups.nix` | ⬜ Not started | Restic or borgbackup |
 | Syncthing | `syncthing.nix` | ⬜ Not started | Mac ↔ OptiPlex file sync |
 | Security hardening | `security.nix` | ⬜ Not started | fail2ban, SSH, audit rules |
@@ -136,6 +136,7 @@ Full ADR-lite entries with reasoning live in [DECISIONS.md](./DECISIONS.md). Thi
 
 | Date | Decision |
 |---|---|
+| 2026-04-17 | Caddy TLS via Cloudflare DNS-01 (Let's Encrypt) |
 | 2026-04-16 | Transmission RPC inside netns only, no veth bridge to host yet |
 | 2026-04-16 | Per-service Caddy vhost blocks (not a shared wildcard matcher) |
 | 2026-04-16 | agenix on both Mac and OptiPlex |

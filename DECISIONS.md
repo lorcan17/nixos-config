@@ -6,6 +6,24 @@
 
 ---
 
+## 2026-04-17 — Caddy TLS via Cloudflare DNS-01 (Let's Encrypt)
+
+**Context:** All Caddy vhosts were using `tls internal` (self-signed CA). Browsers click through the warning, but the ntfy mobile app rejects self-signed certs outright, blocking finance-digest push notifications. A valid TLS solution was needed.
+
+**Decision:** Use ACME DNS-01 challenge via the Caddy Cloudflare DNS plugin (`github.com/caddy-dns/cloudflare`). Caddy is built with the plugin via `pkgs.caddy.withPlugins`; the Cloudflare API token is stored as `caddy-cf-api-token.age` and injected via `EnvironmentFile`.
+
+**Rationale:**
+- DNS-01 requires no public port exposure — works entirely over Tailscale with no router port-forwarding.
+- Fixes all five subdomains (root, ntfy, chat, abs, ghostfolio) in one change.
+- Tailscale Serve was considered but would have required reworking all existing vhosts and loses Caddy's routing flexibility.
+- HTTP-01 was ruled out as it requires exposing port 80 publicly.
+
+**Consequences:** Caddy package is now a custom build; hash must be pinned in `caddy.nix` and updated when the plugin is upgraded. `caddy-cf-api-token.age` (env-file format: `CF_API_TOKEN=...`) is a new required secret on OptiPlex. All five vhost `extraConfig` blocks now carry a `tls { dns cloudflare {$CF_API_TOKEN} }` stanza.
+
+**Revisit if:** The Cloudflare DNS plugin stops being maintained, the domain moves to a different registrar, or a public IP becomes available and HTTP-01 becomes simpler.
+
+---
+
 ## 2026-04-16 — Transmission RPC inside netns only, no veth bridge to host yet
 
 **Context:** `torrenting.nix` binds Transmission's RPC to `127.0.0.1:9091` inside the `wg-mullvad` netns. The host network (Tailscale, Caddy, future Radarr) cannot reach that address without additional plumbing. Needed an explicit decision on whether to add a veth pair now or defer it.

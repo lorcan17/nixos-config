@@ -3,7 +3,6 @@
   services.ntfy-sh = {
     enable = true;
     settings = {
-      base-url            = "http://localhost:2586";
       listen-http         = ":2586";
       behind-proxy        = true;
       auth-default-access = "allow-all";
