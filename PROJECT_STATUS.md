@@ -58,7 +58,7 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | Open-WebUI | `open-webui.nix` | ✅ Running | chat.{$DOMAIN} verified |
 | Kokoro TTS | `kokoro.nix` | ✅ Running | Docker (CPU); API on 0.0.0.0:8880 (Tailscale-accessible) |
 | Audiobookshelf | `audiobookshelf.nix` | ✅ Running | abs.{$DOMAIN} verified |
-| Audiobook pipeline | `audiobook.nix` + `audiobook.py` | ⚠ Untested | CPU too slow for books; articles viable; needs paid TTS or better hardware for books |
+| Audiobook pipeline | `audiobook.nix` + `audiobook.py` | ⚠ Partial | Books confirmed working + showing in Audiobookshelf; CPU too slow for books at scale; articles untested; paid TTS or better hardware needed for books |
 | Whisper.cpp | `whisper.nix` | ⬜ Not started | STT for meeting transcription |
 | Ghostfolio | `ghostfolio.nix` | ✅ Running | Docker Compose + Caddy vhost; uses existing `fmp-api-key` agenix secret |
 | ntfy | `ntfy.nix` | ✅ Running | HTTPS via Cloudflare DNS-01; mobile push working |
