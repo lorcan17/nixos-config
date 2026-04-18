@@ -18,4 +18,5 @@ in {
   "mullvad-wg-config.age".publicKeys       = [ lorcan optiplex ];
   "questrade-consumer-key.age".publicKeys  = [ lorcan optiplex ];
   "anthropic-api-key.age".publicKeys       = [ lorcan optiplex ];
+  "caddy-cf-api-token.age".publicKeys     = [ lorcan optiplex ];
 }

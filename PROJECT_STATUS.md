@@ -61,7 +61,7 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | Audiobook pipeline | `audiobook.nix` + `audiobook.py` | ⚠ Untested | CPU too slow for books; articles viable; needs paid TTS or better hardware for books |
 | Whisper.cpp | `whisper.nix` | ⬜ Not started | STT for meeting transcription |
 | Ghostfolio | `ghostfolio.nix` | ✅ Running | Docker Compose + Caddy vhost; uses existing `fmp-api-key` agenix secret |
-| ntfy | `ntfy.nix` | ⚠️ TLS blocked | Service runs on :2586 behind Caddy; mobile app requires valid HTTPS cert — blocked on Caddy TLS decision (see DECISIONS.md) |
+| ntfy | `ntfy.nix` | ⚠️ TLS pending | Service runs on :2586 behind Caddy; DNS-01 via Cloudflare wired — blocked on `cf-api-token.age` secret creation + plugin hash update |
 | questrade-extract | `finance.nix` | ✅ Timer registered | Runs Mon-Fri 16:30 Vancouver; writes to `/var/lib/questrade-extract/questrade.db`; token at `~/.config/questrade/token` |
 | finance-digest | `finance.nix` | ✅ Timer registered | Runs Mon-Fri 17:00 Vancouver; reads DB → Claude → ntfy; blocked on ntfy TLS |
 | Monitoring | `monitoring.nix` | ⬜ Not started | Low-effort visibility win |
@@ -96,7 +96,7 @@ _Nothing currently in progress._
 - [x] **Ghostfolio** — running; `$FMP_API_KEY` wired via agenix. _(landed 2026-04-17)_
 - [x] **questrade-extract** — daily systemd timer pulls balances + positions from Questrade API → SQLite at `/var/lib/questrade-extract/questrade.db`. Repo: `github:lorcan17/questrade-extract`. _(landed 2026-04-17)_
 - [x] **finance-digest** — daily systemd timer reads DB → Claude analysis → ntfy push. Repo: `github:lorcan17/finance-digest`. Blocked on ntfy TLS. _(landed 2026-04-17)_
-- [ ] **Caddy TLS** — required to unblock ntfy mobile push. Options: DNS-01 challenge (needs DNS provider API token) or expose port 80/443 publicly for HTTP-01. Decision pending.
+- [ ] **Caddy TLS** — DNS-01 via Cloudflare wired in code. Needs: (1) create `cf-api-token.age` secret, (2) fix plugin hash after first failed build, (3) `nixos-rebuild switch`.
 - [ ] **LLM portfolio updater** — Python job: broker CSV/PDF from a Syncthing folder → Claude API extracts activities → POST to Ghostfolio `/api/v1/order`.
 - [ ] **Bank PDF → Sure pipeline** — bank statement PDF → n8n workflow → LLM extracts transactions → structured JSON → Sure Import API. Sure is self-hosted. Consider routing bank PDFs through Paperless-ngx first (OCR + archival) before n8n picks them up.
 - [ ] **LangAlpha** — multi-agent equity research stack (LangGraph + MongoDB + Playwright + paid APIs, ~$30–80/mo realistic). Defer until finance basics are stable and Docker/Tailscale are bedded in.

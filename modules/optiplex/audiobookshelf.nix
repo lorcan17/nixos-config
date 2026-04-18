@@ -18,7 +18,9 @@
   users.users.lorcan.extraGroups = [ "audiobookshelf" ];
 
   services.caddy.virtualHosts."abs.{$DOMAIN}".extraConfig = ''
-    tls internal
+    tls {
+      dns cloudflare {$CF_API_TOKEN}
+    }
     reverse_proxy localhost:13378
   '';
 }

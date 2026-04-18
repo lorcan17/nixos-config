@@ -11,7 +11,9 @@
   };
 
   services.caddy.virtualHosts."chat.{$DOMAIN}".extraConfig = ''
-    tls internal
+    tls {
+      dns cloudflare {$CF_API_TOKEN}
+    }
     reverse_proxy localhost:8080
   '';
 }
