@@ -18,6 +18,7 @@ in {
       User           = "lorcan";
       OnFailure      = "ntfy-alert@%n.service";
       ExecStart      = "${extractEnv}/bin/python3 -m questrade_extract.runner";
+      ExecStartPost  = "${pkgs.curl}/bin/curl -fsS 'https://kuma.blue-apricots.com/api/push/RZBVNAMPW1ZXKA8cy5JRay3EIvhZkpAq?status=up&msg=OK&ping='";
       StateDirectory = "questrade-extract";
       Environment    = [
         "PYTHONPATH=${questrade-extract}/src"
@@ -54,6 +55,7 @@ in {
         export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317"
         exec ${digestEnv}/bin/python3 -m finance_digest.runner
       '';
+      ExecStartPost = "${pkgs.curl}/bin/curl -fsS 'https://kuma.blue-apricots.com/api/push/xRxmacrSXeuAoSW5cobyT2o6voUhQE8j?status=up&msg=OK&ping='";
     };
   };
 
