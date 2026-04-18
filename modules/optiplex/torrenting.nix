@@ -45,6 +45,32 @@ in {
     };
   };
 
+  # Uptime Kuma heartbeat — pings every 60s; set monitor interval to 120s in Kuma UI.
+  # Checks transmission is active before pinging so Kuma sees a real down signal.
+  systemd.services.transmission-kuma-heartbeat = {
+    description = "Uptime Kuma heartbeat for Transmission";
+    serviceConfig = {
+      Type    = "oneshot";
+      ExecStart = pkgs.writeShellScript "transmission-kuma-heartbeat" ''
+        if systemctl is-active --quiet transmission; then
+          status=up msg=OK
+        else
+          status=down msg=transmission-not-running
+        fi
+        ${pkgs.curl}/bin/curl -fsS \
+          "https://kuma.blue-apricots.com/api/push/u0T40rYigelnoCpF5cwPuKcqgcCbhH4N?status=$status&msg=$msg&ping="
+      '';
+    };
+  };
+
+  systemd.timers.transmission-kuma-heartbeat = {
+    wantedBy  = [ "timers.target" ];
+    timerConfig = {
+      OnBootSec       = "60s";
+      OnUnitActiveSec = "60s";
+    };
+  };
+
   # Move the unit into the wg-mullvad netns
   systemd.services.transmission = {
     after    = [ "wg-mullvad.service" ];
