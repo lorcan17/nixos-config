@@ -115,6 +115,83 @@
                 for          = "5m";
                 isPaused     = false;
               }
+              {
+                uid       = "cpu-high";
+                title     = "CPU usage > 90%";
+                condition = "C";
+                data = [
+                  {
+                    refId = "A";
+                    relativeTimeRange = { from = 600; to = 0; };
+                    datasourceUid = "prometheus";
+                    model = {
+                      expr  = "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)";
+                      instant = true;
+                      refId = "A";
+                    };
+                  }
+                  {
+                    refId = "C";
+                    relativeTimeRange = { from = 0; to = 0; };
+                    datasourceUid = "__expr__";
+                    model = {
+                      type       = "threshold";
+                      expression = "A";
+                      refId      = "C";
+                      conditions = [{
+                        evaluator = { type = "gt"; params = [ 90 ]; };
+                        operator  = { type = "and"; };
+                        query     = { params = [ "A" ]; };
+                        reducer   = { type = "last"; params = []; };
+                        type      = "query";
+                      }];
+                    };
+                  }
+                ];
+                noDataState  = "OK";
+                execErrState = "Error";
+                # sustained high CPU for 10m before alerting to avoid spikes
+                for          = "10m";
+                isPaused     = false;
+              }
+              {
+                uid       = "memory-high";
+                title     = "Memory usage > 85%";
+                condition = "C";
+                data = [
+                  {
+                    refId = "A";
+                    relativeTimeRange = { from = 300; to = 0; };
+                    datasourceUid = "prometheus";
+                    model = {
+                      expr  = "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100";
+                      instant = true;
+                      refId = "A";
+                    };
+                  }
+                  {
+                    refId = "C";
+                    relativeTimeRange = { from = 0; to = 0; };
+                    datasourceUid = "__expr__";
+                    model = {
+                      type       = "threshold";
+                      expression = "A";
+                      refId      = "C";
+                      conditions = [{
+                        evaluator = { type = "gt"; params = [ 85 ]; };
+                        operator  = { type = "and"; };
+                        query     = { params = [ "A" ]; };
+                        reducer   = { type = "last"; params = []; };
+                        type      = "query";
+                      }];
+                    };
+                  }
+                ];
+                noDataState  = "OK";
+                execErrState = "Error";
+                for          = "5m";
+                isPaused     = false;
+              }
             ];
           }];
         };

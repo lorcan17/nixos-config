@@ -1,6 +1,6 @@
 # nix-config — Project Status
 
-> Living doc. Update when modules land or plans change. Last updated: 2026-04-17 (finance pipeline built; ntfy TLS pending).
+> Living doc. Update when modules land or plans change. Last updated: 2026-04-18 (Grafana alerts provisioned in code; Uptime Kuma UI setup pending).
 
 ---
 
@@ -70,8 +70,8 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | Monitoring | `netdata.nix` | ✅ Running | monitor.{$DOMAIN} behind Caddy — supplementary; will be scraped by OTEL Collector |
 | OTEL Collector | `otelcol.nix` | ✅ Running | OTLP receiver :4317/:4318; prometheus exporter :8889 |
 | Prometheus | `prometheus.nix` | ✅ Running | node_exporter + Netdata + OTEL scrape configs active |
-| Grafana | `grafana.nix` | ✅ Running | grafana.blue-apricots.com; datasource + contact point provisioned; alerts need UI config |
-| Uptime Kuma | `uptime-kuma.nix` | ✅ Running | kuma.blue-apricots.com; monitors + ntfy notification need UI setup |
+| Grafana | `grafana.nix` | ✅ Running | grafana.blue-apricots.com; disk/CPU/memory alerts provisioned in code → ntfy |
+| Uptime Kuma | `uptime-kuma.nix` | ⚠ Needs UI | kuma.blue-apricots.com; monitors + ntfy notification need UI setup |
 | Backups | `backups.nix` | ⬜ Not started | Restic or borgbackup |
 | Syncthing | `syncthing.nix` | ⬜ Not started | Mac ↔ OptiPlex file sync |
 | Security hardening | `security.nix` | ⬜ Not started | fail2ban, SSH, audit rules |
