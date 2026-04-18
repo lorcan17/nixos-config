@@ -1,7 +1,8 @@
 { pkgs, config, domain, questrade-extract, finance-digest, ... }:
 let
-  extractEnv = pkgs.python3.withPackages (ps: [ ps.requests ]);
-  digestEnv  = pkgs.python3.withPackages (ps: [ ps.requests ps.anthropic ]);
+  otelPkgs   = ps: [ ps.opentelemetry-api ps.opentelemetry-sdk ps.opentelemetry-exporter-otlp-proto-grpc ];
+  extractEnv = pkgs.python3.withPackages (ps: [ ps.requests ] ++ otelPkgs ps);
+  digestEnv  = pkgs.python3.withPackages (ps: [ ps.requests ps.anthropic ] ++ otelPkgs ps);
 in {
   # agenix secrets readable by lorcan
   # domain secret is declared in alerts.nix; referenced here via config.age.secrets.domain.path
@@ -21,6 +22,7 @@ in {
       Environment    = [
         "PYTHONPATH=${questrade-extract}/src"
         "STATE_DIRECTORY=/var/lib/questrade-extract"
+        "OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317"
       ];
     };
   };
@@ -49,6 +51,7 @@ in {
         export NTFY_URL="https://ntfy.${domain}/finance"
         export PYTHONPATH="${finance-digest}/src"
         export QUESTRADE_DB_PATH="/var/lib/questrade-extract/questrade.db"
+        export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317"
         exec ${digestEnv}/bin/python3 -m finance_digest.runner
       '';
     };
