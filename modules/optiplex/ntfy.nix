@@ -12,15 +12,24 @@
     };
   };
 
-  # Read domain secret at service start and export NTFY_BASE_URL to override the placeholder.
-  systemd.services.ntfy-sh.serviceConfig = {
-    ExecStartPre = pkgs.writeShellScript "ntfy-set-base-url" ''
-      domain=$(cat ${config.age.secrets.domain.path})
-      echo "NTFY_BASE_URL=https://ntfy.$domain" > /run/ntfy-base-url
-      chmod 400 /run/ntfy-base-url
-    '';
-    EnvironmentFile = "/run/ntfy-base-url";
+  # systemd loads EnvironmentFile before ExecStartPre, so a separate oneshot
+  # service generates /run/ntfy-base-url before ntfy-sh starts.
+  systemd.services.ntfy-base-url = {
+    description = "Generate ntfy NTFY_BASE_URL env file from domain secret";
+    wantedBy    = [ "ntfy-sh.service" ];
+    before      = [ "ntfy-sh.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = pkgs.writeShellScript "gen-ntfy-base-url" ''
+        domain=$(cat ${config.age.secrets.domain.path})
+        echo "NTFY_BASE_URL=https://ntfy.$domain" > /run/ntfy-base-url
+        chmod 400 /run/ntfy-base-url
+      '';
+    };
   };
+
+  systemd.services.ntfy-sh.serviceConfig.EnvironmentFile = "/run/ntfy-base-url";
 
   # Caddy vhost — proxies ntfy.{$DOMAIN} → localhost:2586
   services.caddy.virtualHosts."ntfy.{$DOMAIN}".extraConfig = ''
