@@ -25,9 +25,9 @@
         static_configs = [{ targets = [ "localhost:19999" ]; }];
       }
       {
-        # OTEL Collector exposes its received metrics on :8888
+        # OTEL Collector prometheus exporter on :8889 (:8888 is otelcol internal telemetry)
         job_name = "otel-collector";
-        static_configs = [{ targets = [ "localhost:8888" ]; }];
+        static_configs = [{ targets = [ "localhost:8889" ]; }];
       }
     ];
   };

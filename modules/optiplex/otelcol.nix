@@ -25,9 +25,9 @@
       };
 
       exporters = {
-        # Exposes received metrics for Prometheus to scrape at :8888
+        # :8888 is otelcol's own internal telemetry; use :8889 for the exporter
         prometheus = {
-          endpoint = "127.0.0.1:8888";
+          endpoint = "127.0.0.1:8889";
         };
       };
 
