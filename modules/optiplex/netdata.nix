@@ -4,7 +4,7 @@
   # NixOS packages Netdata's web assets under the store path; without this
   # the daemon serves 404 for every request.
   services.netdata.config.web."web files dir" =
-    "${pkgs.netdata}/share/netdata";
+    "${pkgs.netdata}/share/netdata/web";
 
   services.caddy.virtualHosts."monitor.${domain}".extraConfig = ''
     import cloudflare_tls
