@@ -48,11 +48,11 @@
     "finance-digest": {
       "flake": false,
       "locked": {
-        "lastModified": 1776487025,
-        "narHash": "sha256-4RrkZ//LSNYY++/a4+RAw3xmbfCkX3toLNhOeiZ7+mo=",
+        "lastModified": 1776487561,
+        "narHash": "sha256-g81qWAX+Mp2OS6NHxQH/ML4XrpEDxPLq0Aq8+L1X1m0=",
         "owner": "lorcan17",
         "repo": "finance-digest",
-        "rev": "d8363024bbad5eb5eec609881b5e97e115fc34f8",
+        "rev": "4efe16212b2300e8ca4c11577e478acbbe8091c2",
         "type": "github"
       },
       "original": {
