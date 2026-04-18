@@ -47,8 +47,11 @@ in {
 
   # Move the unit into the wg-mullvad netns
   systemd.services.transmission = {
-    after   = [ "wg-mullvad.service" ];
+    after    = [ "wg-mullvad.service" ];
     requires = [ "wg-mullvad.service" ];
-    serviceConfig.NetworkNamespacePath = "/var/run/netns/${ns}";
+    serviceConfig = {
+      NetworkNamespacePath = "/var/run/netns/${ns}";
+      OnFailure            = "ntfy-alert@%n.service";
+    };
   };
 }

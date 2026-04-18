@@ -75,9 +75,10 @@ in {
         ip -n ${ns} addr add "$addr" dev wg0
       done
 
-      # 6. up + default route through the tunnel
+      # 6. up + default routes through the tunnel (v4 + v6 if assigned)
       ip -n ${ns} link set wg0 up
-      ip -n ${ns} route add default dev wg0
+      ip    -n ${ns} route add default dev wg0
+      ip -6 -n ${ns} route add default dev wg0 2>/dev/null || true
     '';
 
     preStop = ''
