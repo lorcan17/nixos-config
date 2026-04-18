@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, domain, ... }:
 let
   ns = "wg-mullvad";
 in {
@@ -28,7 +28,7 @@ in {
     package         = pkgs.transmission_4;
     openRPCPort     = false; # behind netns; never expose directly to host
     settings = {
-      rpc-bind-address          = "127.0.0.1";
+      rpc-bind-address          = "192.168.254.2"; # veth-tr-ns — reachable from host via veth
       rpc-port                  = 9091;
       rpc-whitelist-enabled     = false;  # whitelist is moot inside netns
       rpc-authentication-required = false;
@@ -70,6 +70,11 @@ in {
       OnUnitActiveSec = "60s";
     };
   };
+
+  services.caddy.virtualHosts."torrents.${domain}".extraConfig = ''
+    import cloudflare_tls
+    reverse_proxy 192.168.254.2:9091
+  '';
 
   # Move the unit into the wg-mullvad netns
   systemd.services.transmission = {

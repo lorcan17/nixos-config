@@ -79,9 +79,19 @@ in {
       ip -n ${ns} link set wg0 up
       ip    -n ${ns} route add default dev wg0
       ip -6 -n ${ns} route add default dev wg0 2>/dev/null || true
+
+      # 7. veth pair so host processes (Caddy) can reach services inside the netns.
+      #    host: veth-tr (192.168.254.1) — netns: veth-tr-ns (192.168.254.2)
+      ip link add veth-tr type veth peer name veth-tr-ns
+      ip link set veth-tr-ns netns ${ns}
+      ip addr add 192.168.254.1/30 dev veth-tr
+      ip link set veth-tr up
+      ip -n ${ns} addr add 192.168.254.2/30 dev veth-tr-ns
+      ip -n ${ns} link set veth-tr-ns up
     '';
 
     preStop = ''
+      ${pkgs.iproute2}/bin/ip link del veth-tr 2>/dev/null || true
       ${pkgs.iproute2}/bin/ip -n ${ns} link del wg0 || true
       ${pkgs.iproute2}/bin/ip netns del ${ns} || true
       rm -f /etc/netns/${ns}/resolv.conf
