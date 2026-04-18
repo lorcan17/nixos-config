@@ -1,6 +1,6 @@
 # nix-config — Project Status
 
-> Living doc. Update when modules land or plans change. Last updated: 2026-04-18 (monitoring layer complete; Grafana alerts + Uptime Kuma fully configured).
+> Living doc. Update when modules land or plans change. Last updated: 2026-04-18 (torrenting + Jellyfin running; veth/web UI pending next rebuild).
 
 ---
 
@@ -55,7 +55,7 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | Ollama | `ollama.nix` | ✅ Running | CPU-only, `0.0.0.0:11434` |
 | Tailscale | `tailscale.nix` | ✅ Running | Auth key via agenix; unblocks most other services |
 | Mullvad + WireGuard | `vpn.nix` | ✅ Running | `wg-mullvad` netns, Sweden exit; consumers join via `NetworkNamespacePath` |
-| Torrenting | `torrenting.nix` | ✅ Module written | Transmission inside `wg-mullvad` netns; RPC on 127.0.0.1:9091 |
+| Torrenting | `torrenting.nix` | ✅ Running | Transmission inside `wg-mullvad` netns; veth pair exposes RPC to host; web UI at torrents.{$DOMAIN} (pending next rebuild); push heartbeat → Kuma |
 | Docker | `docker.nix` | ✅ Running | autoPrune enabled; lorcan in docker group |
 | Caddy reverse proxy | `caddy.nix` | ✅ Running | Root + subdomain verified |
 | Open-WebUI | `open-webui.nix` | ✅ Running | chat.{$DOMAIN} verified |
@@ -70,7 +70,8 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | OTEL Collector | `otelcol.nix` | ✅ Running | OTLP receiver :4317/:4318; prometheus exporter :8889 |
 | Prometheus | `prometheus.nix` | ✅ Running | node_exporter + Netdata + OTEL scrape configs active |
 | Grafana | `grafana.nix` | ✅ Running | grafana.blue-apricots.com; disk/CPU/memory alerts provisioned in code → ntfy |
-| Uptime Kuma | `uptime-kuma.nix` | ✅ Running | kuma.blue-apricots.com; HTTP monitors + finance heartbeats configured; ntfy wired |
+| Uptime Kuma | `uptime-kuma.nix` | ✅ Running | kuma.blue-apricots.com; HTTP monitors + finance heartbeats configured; ntfy wired; add Transmission push monitor (120s interval) |
+| Jellyfin | `jellyfin.nix` | ✅ Running | media.blue-apricots.com; setup wizard complete; add Movies library → /var/lib/transmission/Downloads |
 | Backups | `backups.nix` | ⬜ Not started | Restic or borgbackup |
 | Syncthing | `syncthing.nix` | ⬜ Not started | Mac ↔ OptiPlex file sync |
 | Security hardening | `security.nix` | ⬜ Not started | fail2ban, SSH, audit rules |
