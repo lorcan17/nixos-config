@@ -40,6 +40,7 @@ in {
     serviceConfig = {
       Type            = "oneshot";
       RemainAfterExit = true;
+      OnFailure       = "ntfy-alert@%n.service";
     };
 
     script = ''

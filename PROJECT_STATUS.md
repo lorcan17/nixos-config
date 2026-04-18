@@ -31,11 +31,14 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 |---|---|---|
 | `fmp-api-key` | Mac + OptiPlex | Financial Modelling Prep API |
 | `tailscale-authkey` | OptiPlex | Reusable auth key consumed by `tailscaled` at daemon start |
-| `caddy-domain` | OptiPlex | **Caddy-only** (env-file format, `DOMAIN=...`). |
-| `domain` | OptiPlex | Bare domain string for service URL construction (e.g. ntfy URL) |
 | `mullvad-wg-config` | OptiPlex | WireGuard `.conf` (Sweden exit) consumed by `vpn.nix` |
 | `questrade-consumer-key` | Mac + OptiPlex | Questrade OAuth app consumer key (bootstrap only) |
 | `anthropic-api-key` | Mac + OptiPlex | Claude API for agentic pipelines |
+| `caddy-cf-api-token` | OptiPlex | Cloudflare API token for DNS-01 TLS challenge |
+
+**Retired secrets (`.age` files remain but are no longer decrypted):**
+- `caddy-domain` — domain is now a Nix variable in `modules/optiplex/config.nix`
+- `domain` — same as above
 
 **Not in agenix (rotating credential):**
 - Questrade refresh token — writable file at `~/.config/questrade/token` per machine; rotated automatically on each run
@@ -64,7 +67,11 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | ntfy | `ntfy.nix` | ✅ Running | HTTPS via Cloudflare DNS-01; mobile push working |
 | questrade-extract | `finance.nix` | ✅ Running | Runs Mon-Fri 16:30 Vancouver; writes to `/var/lib/questrade-extract/questrade.db` |
 | finance-digest | `finance.nix` | ✅ Running | Runs Mon-Fri 17:00 Vancouver; mobile notification verified end-to-end |
-| Monitoring | `netdata.nix` | ✅ Running | monitor.{$DOMAIN} behind Caddy |
+| Monitoring | `netdata.nix` | ✅ Running | monitor.{$DOMAIN} behind Caddy — supplementary; will be scraped by OTEL Collector |
+| OTEL Collector | `otelcol.nix` | ⬜ Needs rebuild | OTLP receiver on :4317/:4318; Prometheus exporter on :8888 |
+| Prometheus | `prometheus.nix` | ⬜ Needs rebuild | node_exporter + Netdata + OTEL scrape; disk alert wired |
+| Grafana | `grafana.nix` | ⬜ Needs rebuild | Prometheus datasource + ntfy contact point provisioned |
+| Uptime Kuma | `uptime-kuma.nix` | ⬜ Needs rebuild | UI config required after first rebuild (see module comments) |
 | Backups | `backups.nix` | ⬜ Not started | Restic or borgbackup |
 | Syncthing | `syncthing.nix` | ⬜ Not started | Mac ↔ OptiPlex file sync |
 | Security hardening | `security.nix` | ⬜ Not started | fail2ban, SSH, audit rules |
@@ -139,6 +146,7 @@ Full ADR-lite entries with reasoning live in [DECISIONS.md](./DECISIONS.md). Thi
 
 | Date | Decision |
 |---|---|
+| 2026-04-17 | Monitoring stack: OTEL Collector → Prometheus → Grafana → ntfy; Uptime Kuma alongside |
 | 2026-04-17 | Keep Caddy plugin + {$DOMAIN} env var; defer security.acme migration |
 | 2026-04-17 | Caddy TLS via Cloudflare DNS-01 (Let's Encrypt) |
 | 2026-04-16 | Transmission RPC inside netns only, no veth bridge to host yet |

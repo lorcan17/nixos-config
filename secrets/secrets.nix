@@ -11,12 +11,11 @@ let
   lorcan   = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILNGNQUutGyQUKHEXNlchZggmMjnSkVnl0f8Hl1K8nb7 ltravers92@gmail.com";
   optiplex = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOcv94KIQ5JhrNxXmLcDByuCAmxu2h59sGYpzk87RQzy root@optiplex";
 in {
-  "fmp-api-key.age".publicKeys             = [ lorcan optiplex ];
-  "tailscale-authkey.age".publicKeys       = [ lorcan optiplex ];
-  "caddy-domain.age".publicKeys            = [ lorcan optiplex ];
-  "domain.age".publicKeys                  = [ lorcan optiplex ];
-  "mullvad-wg-config.age".publicKeys       = [ lorcan optiplex ];
-  "questrade-consumer-key.age".publicKeys  = [ lorcan optiplex ];
-  "anthropic-api-key.age".publicKeys       = [ lorcan optiplex ];
+  "fmp-api-key.age".publicKeys            = [ lorcan optiplex ];
+  "tailscale-authkey.age".publicKeys      = [ lorcan optiplex ];
+  "mullvad-wg-config.age".publicKeys      = [ lorcan optiplex ];
+  "questrade-consumer-key.age".publicKeys = [ lorcan optiplex ];
+  "anthropic-api-key.age".publicKeys      = [ lorcan optiplex ];
   "caddy-cf-api-token.age".publicKeys     = [ lorcan optiplex ];
+  # caddy-domain.age and domain.age retired — domain is now a Nix var in config.nix
 }

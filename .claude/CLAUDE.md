@@ -56,6 +56,30 @@ ssh optiplex "cd ~/nix-config && git pull && sudo nixos-rebuild switch --flake .
 - **Add a homebrew cask:** edit `modules/mac/mac-homebrew.nix` under `homebrew.casks`.
 - **Add a CLI tool:** edit `modules/shared/terminal-tools.nix` or `modules/shared/shell.nix`.
 
+## Observability architecture (OptiPlex)
+
+The monitoring stack is intentionally layered — do not add ad-hoc alternatives:
+
+| Layer | Tool | Module |
+|---|---|---|
+| Metrics collection | OTEL Collector (`otelcol`) | `otelcol.nix` |
+| Time-series storage | Prometheus | `prometheus.nix` |
+| Dashboards + alerting | Grafana → ntfy webhook | `grafana.nix` |
+| HTTP uptime + heartbeats | Uptime Kuma → ntfy native | `uptime-kuma.nix` |
+| Push notifications | ntfy (`alerts` topic) | `ntfy.nix` |
+
+- Netdata runs for lightweight system visibility but is scraped by OTEL Collector, not queried directly for alerting.
+- Python pipelines instrument via OTLP push to the Collector when app-level telemetry is needed.
+- All alert paths terminate at ntfy `alerts` topic — single routing point.
+
+## Caddy TLS
+
+All Caddy vhosts use `import cloudflare_tls` — the snippet is defined once in `caddy.nix` `extraConfig`. Never copy the 3-line `tls { dns cloudflare ... }` block directly into a service module.
+
+## Failure alerting
+
+Critical systemd services declare `OnFailure = "ntfy-alert@%n.service"`. The template service is defined in `alerts.nix`. Add it to any service whose failure should produce an ntfy push.
+
 ## Style
 - Use `lib.mkDefault` for values that individual machines might override.
 - Group related options together with comments.

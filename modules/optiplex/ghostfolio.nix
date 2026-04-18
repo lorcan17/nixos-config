@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, domain, ... }:
 let
   composeFile = pkgs.writeText "ghostfolio-compose.yml" ''
     version: "3.8"
@@ -76,10 +76,8 @@ in {
     '';
   };
 
-  services.caddy.virtualHosts."ghostfolio.{$DOMAIN}".extraConfig = ''
-    tls {
-      dns cloudflare {$CF_API_TOKEN}
-    }
+  services.caddy.virtualHosts."ghostfolio.${domain}".extraConfig = ''
+    import cloudflare_tls
     reverse_proxy localhost:3333
   '';
 }

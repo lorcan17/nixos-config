@@ -6,6 +6,42 @@
 
 ---
 
+## 2026-04-17 — Domain exposed as Nix variable; caddy-domain and domain secrets retired
+
+**Context:** The homelab domain was stored in two agenix secrets (`caddy-domain` as an env-file for Caddy, `domain` as a raw value for service URL construction). Every service that needed the domain required EnvironmentFile plumbing or secret-file reading at runtime. Adding Grafana and Uptime Kuma URLs made the friction obvious.
+
+**Decision:** Expose the domain as a Nix string in `modules/optiplex/config.nix` via `_module.args.domain`. All optiplex modules receive it as `{ domain, ... }` and use it in string interpolation directly. The `caddy-domain` and `domain` age secrets are retired (files remain on disk but are no longer declared or decrypted).
+
+**Rationale:** The domain is already visible in Let's Encrypt certificate transparency logs and DNS. Keeping it out of the git repo was always privacy theatre, not security. Eliminating both secrets removes: two age files, the caddy EnvironmentFile entry, the `ntfy-base-url` oneshot service, and all runtime secret-file reads for URL construction.
+
+**Consequences:** `modules/optiplex/config.nix` is the single place to change the domain. The `caddy-cf-api-token` secret remains (API token is genuinely sensitive). Age files `caddy-domain.age` and `domain.age` can be deleted from `secrets/` at any time — they are no longer decrypted.
+
+**Revisit if:** A second domain is added (extend `config.nix` with additional args), or the repo needs to become a public template (parameterise domain via flake input instead of hardcoded string).
+
+---
+
+## 2026-04-17 — Monitoring stack: OTEL Collector → Prometheus → Grafana → ntfy; Uptime Kuma alongside
+
+**Context:** OptiPlex is accumulating services and pipelines (Ghostfolio, finance-digest, audiobook, Ollama, Caddy, Mullvad). Needed a unified observability strategy covering system metrics, HTTP uptime, pipeline health, and alerting — chosen before any individual monitoring service is built, so the stack is coherent rather than bolted together reactively.
+
+**Decision:** Adopt the following stack:
+- **OTEL Collector** (`otelcol`) — unified receiver; scrapes Netdata's Prometheus endpoint, receives OTLP from instrumented Python pipelines, exports to Prometheus
+- **Prometheus** — time-series storage backend
+- **Grafana** — dashboards + alert rules; notifies ntfy via webhook contact point
+- **Uptime Kuma** — HTTP endpoint uptime monitoring + push heartbeat monitors for pipelines; notifies ntfy natively
+
+**Rationale:**
+- OTEL Collector future-proofs pipeline instrumentation: pipelines push OTLP when they want app-level telemetry (run duration, API latency, error counts) without changing the Prometheus/Grafana layer.
+- Prometheus + Grafana is the standard NixOS-supported stack with mature modules; Grafana's alerting covers the systemd metric and threshold cases Netdata handles awkwardly.
+- Uptime Kuma is not redundant with Prometheus Blackbox Exporter — its push heartbeat monitor type ("did my pipeline phone home in 24h?") has no clean Prometheus native equivalent. It also produces a human-readable status page.
+- All alert paths terminate at ntfy (`alerts` topic) so there is one place to configure notification routing.
+
+**Consequences:** Four new modules: `otelcol.nix`, `prometheus.nix`, `grafana.nix`, `uptime-kuma.nix`. All follow the Dendritic one-file-per-feature pattern. Python pipelines gain optional OTLP instrumentation; Grafana ntfy webhook contact point becomes a required secret (`grafana-ntfy-url` or reuses existing `domain` secret to construct the URL). `wip/monitoring.nix` is the starting draft for this work.
+
+**Revisit if:** Grafana Cloud becomes cheaper than self-hosting this stack (compute cost vs ops overhead), or a lighter stack (e.g. Victoria Metrics + Grafana, skipping OTEL) proves sufficient.
+
+---
+
 ## 2026-04-17 — Keep Caddy plugin + {$DOMAIN} env var; defer security.acme migration
 
 **Context:** `security.acme` (NixOS-native ACME via lego) was identified as an alternative to the `pkgs.caddy.withPlugins` approach — it eliminates the hash dance and requires no custom Caddy build. However, it requires the domain to be known at eval time, meaning it must appear in the `.nix` files in the public git repo.

@@ -1,4 +1,4 @@
-{ ... }: {
+{ domain, ... }: {
   services.audiobookshelf = {
     enable = true;
     host   = "127.0.0.1";
@@ -17,10 +17,8 @@
 
   users.users.lorcan.extraGroups = [ "audiobookshelf" ];
 
-  services.caddy.virtualHosts."abs.{$DOMAIN}".extraConfig = ''
-    tls {
-      dns cloudflare {$CF_API_TOKEN}
-    }
+  services.caddy.virtualHosts."abs.${domain}".extraConfig = ''
+    import cloudflare_tls
     reverse_proxy localhost:13378
   '';
 }

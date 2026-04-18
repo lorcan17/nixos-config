@@ -1,4 +1,4 @@
-{ ... }: {
+{ domain, ... }: {
   services.open-webui = {
     enable = true;
     host   = "127.0.0.1";
@@ -10,10 +10,8 @@
     };
   };
 
-  services.caddy.virtualHosts."chat.{$DOMAIN}".extraConfig = ''
-    tls {
-      dns cloudflare {$CF_API_TOKEN}
-    }
+  services.caddy.virtualHosts."chat.${domain}".extraConfig = ''
+    import cloudflare_tls
     reverse_proxy localhost:8080
   '';
 }
