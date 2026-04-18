@@ -18,7 +18,7 @@ in {
   # mount to a media disk once Radarr arrives.
   #
   # Smoke test:
-  #   sudo ip netns exec wg-mullvad curl -s http://127.0.0.1:9091/transmission/rpc
+  #   sudo ip netns exec wg-mullvad curl -s http://192.168.254.2:9091/transmission/rpc
   #   → 409 with X-Transmission-Session-Id header means the daemon is alive
   #   sudo ip netns exec wg-mullvad curl -s https://am.i.mullvad.net/json
   #   → mullvad_exit_ip: true confirms traffic exits via the tunnel
