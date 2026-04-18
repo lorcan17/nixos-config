@@ -55,7 +55,7 @@ in {
         export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317"
         exec ${digestEnv}/bin/python3 -m finance_digest.runner
       '';
-      ExecStartPost = "${pkgs.curl}/bin/curl -fsS 'https://kuma.blue-apricots.com/api/push/xRxmacrSXeuAoSW5cobyT2o6voUhQE8j?status=up&msg=OK&ping='";
+      ExecStartPost = "${pkgs.curl}/bin/curl -fsS 'https://kuma.blue-apricots.com/api/push/8k5B7mYQthhIYYCKlCI0GOk5WVMOYyga?status=up&msg=OK&ping='";
     };
   };
 
