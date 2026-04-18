@@ -68,10 +68,10 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | questrade-extract | `finance.nix` | ✅ Running | Runs Mon-Fri 16:30 Vancouver; writes to `/var/lib/questrade-extract/questrade.db` |
 | finance-digest | `finance.nix` | ✅ Running | Runs Mon-Fri 17:00 Vancouver; mobile notification verified end-to-end |
 | Monitoring | `netdata.nix` | ✅ Running | monitor.{$DOMAIN} behind Caddy — supplementary; will be scraped by OTEL Collector |
-| OTEL Collector | `otelcol.nix` | ⬜ Needs rebuild | OTLP receiver on :4317/:4318; Prometheus exporter on :8888 |
-| Prometheus | `prometheus.nix` | ⬜ Needs rebuild | node_exporter + Netdata + OTEL scrape; disk alert wired |
-| Grafana | `grafana.nix` | ⬜ Needs rebuild | Prometheus datasource + ntfy contact point provisioned |
-| Uptime Kuma | `uptime-kuma.nix` | ⬜ Needs rebuild | UI config required after first rebuild (see module comments) |
+| OTEL Collector | `otelcol.nix` | ✅ Running | OTLP receiver :4317/:4318; prometheus exporter :8889 |
+| Prometheus | `prometheus.nix` | ✅ Running | node_exporter + Netdata + OTEL scrape configs active |
+| Grafana | `grafana.nix` | ✅ Running | grafana.blue-apricots.com; datasource + contact point provisioned; alerts need UI config |
+| Uptime Kuma | `uptime-kuma.nix` | ✅ Running | kuma.blue-apricots.com; monitors + ntfy notification need UI setup |
 | Backups | `backups.nix` | ⬜ Not started | Restic or borgbackup |
 | Syncthing | `syncthing.nix` | ⬜ Not started | Mac ↔ OptiPlex file sync |
 | Security hardening | `security.nix` | ⬜ Not started | fail2ban, SSH, audit rules |
