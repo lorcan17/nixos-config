@@ -72,6 +72,36 @@ The monitoring stack is intentionally layered — do not add ad-hoc alternatives
 - Python pipelines instrument via OTLP push to the Collector when app-level telemetry is needed.
 - All alert paths terminate at ntfy `alerts` topic — single routing point.
 
+## Grafana alerts
+
+Alert rules are **fully declarative** — defined in `grafana.nix` under `services.grafana.provision.alerting.rules.settings`. Do not configure alert rules via the UI; they will be overwritten on next rebuild.
+
+Current rules (all in the `Homelab` folder, `homelab` group, 5-minute eval interval):
+- `disk-high` — root filesystem usage > 85% for 5m
+- `cpu-high` — average CPU > 90% sustained for 10m (10m duration avoids Ollama spikes)
+- `memory-high` — memory usage > 85% for 5m
+
+All rules route to the `ntfy` contact point (webhook → `https://ntfy.blue-apricots.com/alerts`) via the default policy. Contact point and routing policy are also provisioned in code.
+
+To add a new alert: add a rule object to the `rules` list in `grafana.nix`. Each rule needs a unique `uid`, a Prometheus `expr` in ref `A`, and a threshold expression in ref `C`.
+
+## Uptime Kuma
+
+Configuration is **UI-only** — no declarative config is supported. Settings live in `/var/lib/uptime-kuma/`.
+
+**HTTP monitors** (check interval 60s, 2 retries) — one per public Caddy vhost:
+ntfy, Open-WebUI, Audiobookshelf, Ghostfolio, Netdata, Grafana, Uptime Kuma (self)
+
+**Push heartbeat monitors** — for oneshot systemd pipelines that must phone home on success:
+- `questrade-extract` — interval 259200s (72h, covers weekend gap)
+- `finance-digest` — interval 259200s (72h, covers weekend gap)
+
+Push URLs are wired into the systemd units via `ExecStartPost` curl calls in `finance.nix`. When adding a new pipeline: create a Push monitor in Kuma UI (259200s interval), copy the push URL, add `ExecStartPost = "${pkgs.curl}/bin/curl -fsS '<url>'"` to the service's `serviceConfig`.
+
+**Notification channel:** ntfy → `https://ntfy.blue-apricots.com/alerts` (configured once in Kuma Settings → Notifications).
+
+No weekend pause option exists in Uptime Kuma — use 259200s (3-day) intervals for Mon-Fri jobs to avoid false weekend alerts. `OnFailure` ntfy push is the primary real-time failure signal; Kuma heartbeat is the "silently stopped running" backstop.
+
 ## Caddy TLS
 
 All Caddy vhosts use `import cloudflare_tls` — the snippet is defined once in `caddy.nix` `extraConfig`. Never copy the 3-line `tls { dns cloudflare ... }` block directly into a service module.
