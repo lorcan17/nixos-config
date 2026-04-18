@@ -68,7 +68,6 @@ The monitoring stack is intentionally layered — do not add ad-hoc alternatives
 | HTTP uptime + heartbeats | Uptime Kuma → ntfy native | `uptime-kuma.nix` |
 | Push notifications | ntfy (`alerts` topic) | `ntfy.nix` |
 
-- Netdata runs for lightweight system visibility but is scraped by OTEL Collector, not queried directly for alerting.
 - Python pipelines instrument via OTLP push to the Collector when app-level telemetry is needed.
 - All alert paths terminate at ntfy `alerts` topic — single routing point.
 

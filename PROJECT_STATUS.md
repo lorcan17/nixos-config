@@ -67,7 +67,6 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | ntfy | `ntfy.nix` | ✅ Running | HTTPS via Cloudflare DNS-01; mobile push working |
 | questrade-extract | `finance.nix` | ✅ Running | Runs Mon-Fri 16:30 Vancouver; writes to `/var/lib/questrade-extract/questrade.db` |
 | finance-digest | `finance.nix` | ✅ Running | Runs Mon-Fri 17:00 Vancouver; mobile notification verified end-to-end |
-| Monitoring | `netdata.nix` | ✅ Running | monitor.{$DOMAIN} behind Caddy — supplementary; will be scraped by OTEL Collector |
 | OTEL Collector | `otelcol.nix` | ✅ Running | OTLP receiver :4317/:4318; prometheus exporter :8889 |
 | Prometheus | `prometheus.nix` | ✅ Running | node_exporter + Netdata + OTEL scrape configs active |
 | Grafana | `grafana.nix` | ✅ Running | grafana.blue-apricots.com; disk/CPU/memory alerts provisioned in code → ntfy |
@@ -146,6 +145,7 @@ Full ADR-lite entries with reasoning live in [DECISIONS.md](./DECISIONS.md). Thi
 
 | Date | Decision |
 |---|---|
+| 2026-04-18 | Netdata removed; node_exporter + OTEL Collector sufficient; web UI unfixable |
 | 2026-04-17 | Monitoring stack: OTEL Collector → Prometheus → Grafana → ntfy; Uptime Kuma alongside |
 | 2026-04-17 | Keep Caddy plugin + {$DOMAIN} env var; defer security.acme migration |
 | 2026-04-17 | Caddy TLS via Cloudflare DNS-01 (Let's Encrypt) |

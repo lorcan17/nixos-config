@@ -6,6 +6,24 @@
 
 ---
 
+## 2026-04-18 — Netdata removed from monitoring stack
+
+**Context:** Netdata was deployed as a supplementary system-visibility layer, with a Prometheus scrape job pointed at its `/api/v1/allmetrics` endpoint and a Caddy vhost at `monitor.{$DOMAIN}`. The web UI repeatedly returned "File does not exist, or is not accessible" despite the `web files dir` config pointing at the correct Nix store path.
+
+**Decision:** Remove Netdata entirely. Delete `modules/optiplex/netdata.nix` and drop the `netdata` scrape job from `prometheus.nix`.
+
+**Rationale:**
+- `node_exporter` already exposes CPU, memory, disk, network, and per-unit systemd state — which are exactly the metrics that Grafana's three alert rules (`disk-high`, `cpu-high`, `memory-high`) query. Netdata was redundant.
+- The OTEL Collector (`otelcol.nix`) never scraped Netdata — it only receives OTLP pushes from Python pipelines. The original monitoring stack decision described this role incorrectly.
+- The web UI bug was a rabbit hole for a dashboard that would rarely be opened when Grafana already covers the space.
+- Removing one layer makes the stack simpler: node_exporter → Prometheus → Grafana is the complete metrics path.
+
+**Consequences:** `monitor.{$DOMAIN}` Caddy vhost is gone. `services.netdata` is no longer enabled on OptiPlex. The `netdata` Prometheus job is removed. No alert logic or dashboard needs updating — Grafana rules queried `node_exporter` metrics, not Netdata metrics.
+
+**Revisit if:** A use case emerges that node_exporter + Grafana genuinely can't cover (e.g. per-container metrics without cAdvisor, or real-time anomaly detection) — at that point, evaluate Netdata 2.x or VictoriaMetrics Anomaly Detection rather than re-adding Netdata for metrics alone.
+
+---
+
 ## 2026-04-17 — Domain exposed as Nix variable; caddy-domain and domain secrets retired
 
 **Context:** The homelab domain was stored in two agenix secrets (`caddy-domain` as an env-file for Caddy, `domain` as a raw value for service URL construction). Every service that needed the domain required EnvironmentFile plumbing or secret-file reading at runtime. Adding Grafana and Uptime Kuma URLs made the friction obvious.

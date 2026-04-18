@@ -18,13 +18,6 @@
         static_configs = [{ targets = [ "localhost:9100" ]; }];
       }
       {
-        # Netdata has a native Prometheus endpoint; no exporter needed
-        job_name     = "netdata";
-        metrics_path = "/api/v1/allmetrics";
-        params        = { format = [ "prometheus_all_hosts" ]; };
-        static_configs = [{ targets = [ "localhost:19999" ]; }];
-      }
-      {
         # OTEL Collector prometheus exporter on :8889 (:8888 is otelcol internal telemetry)
         job_name = "otel-collector";
         static_configs = [{ targets = [ "localhost:8889" ]; }];
