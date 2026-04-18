@@ -30,8 +30,9 @@ in {
     settings = {
       rpc-bind-address          = "192.168.254.2"; # veth-tr-ns — reachable from host via veth
       rpc-port                  = 9091;
-      rpc-whitelist-enabled     = false;  # whitelist is moot inside netns
-      rpc-authentication-required = false;
+      rpc-whitelist-enabled           = false;
+      rpc-host-whitelist-enabled      = false; # allow proxied requests via Caddy
+      rpc-authentication-required     = false;
 
       # Peer port — must be open inside the netns for seeding
       peer-port                 = 51413;
