@@ -61,10 +61,10 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | Audiobook pipeline | `audiobook.nix` + `audiobook.py` | ⚠ Untested | CPU too slow for books; articles viable; needs paid TTS or better hardware for books |
 | Whisper.cpp | `whisper.nix` | ⬜ Not started | STT for meeting transcription |
 | Ghostfolio | `ghostfolio.nix` | ✅ Running | Docker Compose + Caddy vhost; uses existing `fmp-api-key` agenix secret |
-| ntfy | `ntfy.nix` | ⚠️ TLS pending | Service runs on :2586 behind Caddy; DNS-01 via Cloudflare wired — blocked on `cf-api-token.age` secret creation + plugin hash update |
-| questrade-extract | `finance.nix` | ✅ Timer registered | Runs Mon-Fri 16:30 Vancouver; writes to `/var/lib/questrade-extract/questrade.db`; token at `~/.config/questrade/token` |
-| finance-digest | `finance.nix` | ✅ Timer registered | Runs Mon-Fri 17:00 Vancouver; reads DB → Claude → ntfy; blocked on ntfy TLS |
-| Monitoring | `netdata.nix` | ⚠️ Pending rebuild | `services.netdata.enable = true`; monitor.{$DOMAIN} vhost wired |
+| ntfy | `ntfy.nix` | ✅ Running | HTTPS via Cloudflare DNS-01; mobile push working |
+| questrade-extract | `finance.nix` | ✅ Running | Runs Mon-Fri 16:30 Vancouver; writes to `/var/lib/questrade-extract/questrade.db` |
+| finance-digest | `finance.nix` | ✅ Running | Runs Mon-Fri 17:00 Vancouver; mobile notification verified end-to-end |
+| Monitoring | `netdata.nix` | ✅ Running | monitor.{$DOMAIN} behind Caddy |
 | Backups | `backups.nix` | ⬜ Not started | Restic or borgbackup |
 | Syncthing | `syncthing.nix` | ⬜ Not started | Mac ↔ OptiPlex file sync |
 | Security hardening | `security.nix` | ⬜ Not started | fail2ban, SSH, audit rules |
@@ -85,6 +85,9 @@ _Nothing currently in progress._
 - [x] **Mullvad + WireGuard (vpn.nix)** — WireGuard config from agenix; introduces the `wg-mullvad` netns that `torrenting.nix` will reuse. _(landed 2026-04-16, verified via am.i.mullvad.net)_
 - [x] **Docker (docker.nix)** — deployed. _(landed 2026-04-17)_
 - [x] **Caddy reverse proxy** — subdomain routing once Tailscale + domain are in. _(verified 2026-04-16)_
+
+### Tier 1.5 — Dev workflow (blocks fast iteration on all Python pipelines)
+- [ ] **WIP project dev workflow** — current loop (edit → commit → flake update → rebuild → test) is too slow for Python iteration. Decision needed on: (1) Syncthing `~/projects/` Mac → OptiPlex so local edits are live without committing; (2) `--override-input` to point NixOS at the synced local path instead of GitHub; (3) gitignored `.env` file per project for personal context (account nicknames, risk preferences, prompt tuning) that never hits git. Direct `python3 -m ...` execution on OptiPlex works as an interim workaround. See DECISIONS.md backlog.
 
 ### Tier 2 — First verticals (share TTS + job-runner scaffolding)
 - [ ] **Gutenberg → audiobook pipeline** — `make-audiobook --gutenberg ID`; Kokoro TTS → `.m4b` with chapters + cover + metadata → Audiobookshelf. Module written; needs `nixos-rebuild switch` on optiplex then first test run.
