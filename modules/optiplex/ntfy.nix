@@ -8,7 +8,7 @@
       base-url            = "https://placeholder.invalid";
       listen-http         = ":2586";
       behind-proxy        = true;
-      auth-default-access = "allow-all";
+      auth-default-access = "read-write";
     };
   };
 
