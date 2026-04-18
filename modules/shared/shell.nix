@@ -14,7 +14,8 @@
 
         # Nix rebuilds
         rebuild-mac    = "sudo darwin-rebuild switch --flake ~/nix-config#lorcans-mac";
-        rebuild-server = "ssh -t optiplex 'cd ~/nix-config && git pull && sudo nixos-rebuild switch --flake .#optiplex'";
+        rebuild-server       = "ssh -t optiplex 'cd ~/nix-config && git pull && sudo nixos-rebuild switch --flake .#optiplex'";
+        rebuild-server-hard  = "ssh -t optiplex 'cd ~/nix-config && git fetch origin && git reset --hard origin/main && sudo nixos-rebuild switch --flake .#optiplex'";
         nix-search     = "nix search nixpkgs";
 
         # Git
