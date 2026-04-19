@@ -1,6 +1,6 @@
 # nix-config — Project Status
 
-> Living doc. Update when modules land or plans change. Last updated: 2026-04-18 (torrenting + Jellyfin running; veth/web UI pending next rebuild).
+> Living doc. Update when modules land or plans change. Last updated: 2026-04-18 (media stack wiring in progress; Jellyseerr rebuild + path mapping fix pending).
 
 ---
 
@@ -61,7 +61,7 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | Open-WebUI | `open-webui.nix` | ✅ Running | chat.{$DOMAIN} verified |
 | Kokoro TTS | `kokoro.nix` | ✅ Running | Docker (CPU); API on 0.0.0.0:8880 (Tailscale-accessible) |
 | Audiobookshelf | `audiobookshelf.nix` | ✅ Running | abs.{$DOMAIN} verified |
-| Audiobook pipeline | `audiobook.nix` + `audiobook.py` | ⚠ Partial | Books confirmed working + showing in Audiobookshelf; CPU too slow for books at scale; articles untested; paid TTS or better hardware needed for books |
+| Audiobook pipeline | `audiobook.nix` + `audiobook.py` | ⚠ Partial | Pipeline verified end-to-end (Mac → OptiPlex Kokoro → mp3); ~25 min/chunk on CPU = ~7.5h for an 18-chunk article. Unusable at scale. Decision pending: OpenAI TTS vs hardware upgrade (see backlog). |
 | Whisper.cpp | `whisper.nix` | ⬜ Not started | STT for meeting transcription |
 | Ghostfolio | `ghostfolio.nix` | ✅ Running | Docker Compose + Caddy vhost; uses existing `fmp-api-key` agenix secret |
 | ntfy | `ntfy.nix` | ✅ Running | HTTPS via Cloudflare DNS-01; mobile push working |
@@ -72,6 +72,11 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | Grafana | `grafana.nix` | ✅ Running | grafana.blue-apricots.com; disk/CPU/memory alerts provisioned in code → ntfy |
 | Uptime Kuma | `uptime-kuma.nix` | ✅ Running | kuma.blue-apricots.com; HTTP monitors + finance heartbeats configured; ntfy wired; Transmission push monitor active |
 | Jellyfin | `jellyfin.nix` | ✅ Running | media.blue-apricots.com; setup wizard complete; Movies library → /var/lib/transmission/Downloads |
+| Byparr | `byparr.nix` | ✅ Running | Cloudflare bypass proxy for Prowlarr; localhost:8191 |
+| Prowlarr | `prowlarr.nix` | ✅ Running | Indexers configured (1337x, YTS, EZTV etc.); Byparr tag wired; synced to Radarr/Sonarr |
+| Radarr | `radarr.nix` | ⚠ Path mapping issue | Transmission download client added; root folder /var/lib/media/movies set; but Radarr expects /var/lib/transmission/Downloads/radarr (category subdir) which doesn't exist — clear the Category field in download client settings |
+| Sonarr | `sonarr.nix` | ⚠ UI config needed | sonarr.blue-apricots.com; needs Transmission download client + /var/lib/media/tv root folder |
+| Jellyseerr | `overseerr.nix` | ⚠ Rebuild needed | Swapped from Overseerr (Plex-only) to Jellyseerr; rebuild pending then run setup wizard → Jellyfin + Radarr + Sonarr |
 | Backups | `backups.nix` | ⬜ Not started | Restic or borgbackup |
 | Syncthing | `syncthing.nix` | ⬜ Not started | Mac ↔ OptiPlex file sync |
 | Security hardening | `security.nix` | ⬜ Not started | fail2ban, SSH, audit rules |
@@ -98,9 +103,31 @@ _Nothing currently in progress._
 
 ### Tier 2 — First verticals (share TTS + job-runner scaffolding)
 - [ ] **Gutenberg → audiobook pipeline** — `make-audiobook --gutenberg ID`; Kokoro TTS → `.m4b` with chapters + cover + metadata → Audiobookshelf. Module written; needs `nixos-rebuild switch` on optiplex then first test run.
-- [ ] **Article → audio briefing** — `make-audiobook --url URL`; same pipeline, outputs `.mp3` to podcasts dir. Module written; same rebuild.
+- [ ] **Article → audio briefing** — `make-audiobook --url URL`; same pipeline, outputs `.mp3` to podcasts dir. Module written + rebuild done. **Blocked on TTS speed** — ~25 min/chunk on Kokoro CPU; a 18-chunk article takes ~7.5h. Decision needed (see below).
 - [ ] **Meeting transcription + summary** — Drop audio file into a watched folder (Syncthing or scp); OptiPlex: Whisper.cpp transcribes → Claude API summarises → delivers text summary (email or push). Optional second pass: Kokoro TTS reads the summary back as an audio file. Mac doesn't need to be on — OptiPlex runs the whole pipeline headlessly. Needs: Whisper.cpp module, Claude API agenix secret, delivery mechanism (email vs push vs Obsidian). Needs more thought before building.
-- [ ] **Torrenting (torrenting.nix)** — Transmission in `wg-mullvad` netns. Enables public-domain audiobook downloads safely.
+- [x] **Torrenting (torrenting.nix)** — Transmission running in `wg-mullvad` netns; web UI at torrents.{$DOMAIN}. _(landed 2026-04-18)_
+
+### TTS speed decision (blocks audiobook + article pipelines)
+
+Kokoro on the OptiPlex CPU is ~25 min/chunk = ~7.5h for a typical long-read article. Three options to weigh:
+
+| Option | Cost | Quality | Latency |
+|---|---|---|---|
+| **OpenAI TTS** (`tts-1`) | ~$0.015/1k chars → ~$0.40/article, ~$3–8/book | Good | Seconds |
+| **OpenAI TTS** (`tts-1-hd`) | ~$0.030/1k chars → ~$0.80/article, ~$6–15/book | Excellent | Seconds |
+| **Hardware upgrade** (used GPU workstation or NUC with iGPU) | $200–600 one-time | Local/private | Minutes |
+
+Break-even on hardware vs OpenAI TTS: at $400 for a used machine and $0.40/article, that's ~1000 articles before hardware pays off. At $3/book, ~133 books.
+
+Decision: defer until audiobook use frequency is known. Default to OpenAI TTS `tts-1` as a per-run opt-in (`--openai` flag) rather than committing to hardware upfront.
+
+### Tier 2.5 — Media stack UI config
+- [x] **Prowlarr indexers** — configured with Byparr for Cloudflare bypass; synced to Radarr/Sonarr _(2026-04-18)_
+- [ ] **Radarr path mapping fix** — in Radarr `Settings → Download Clients → Transmission`, clear the **Category** field (currently "radarr") so downloads go to `/var/lib/transmission/Downloads` directly, not a non-existent subdir
+- [ ] **Sonarr UI config** — add Transmission download client (`192.168.254.2:9091`), set root folder `/var/lib/media/tv`; clear Category field
+- [ ] **Jellyfin library update** — change Movies library path from `/var/lib/transmission/Downloads` to `/var/lib/media/movies`
+- [ ] **Jellyseerr rebuild + setup** — `nixos-rebuild switch` to activate (overseerr → jellyseerr swap); run wizard → sign in with Jellyfin at `http://localhost:8096`; connect Radarr + Sonarr
+- [ ] **Stremio + Torrentio** — install Stremio + Mullvad on Onn Android TV box; add Torrentio addon
 
 ### Tier 3 — Finance stack
 - [x] **Ghostfolio** — running; `$FMP_API_KEY` wired via agenix. _(landed 2026-04-17)_
