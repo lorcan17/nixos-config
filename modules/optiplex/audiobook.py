@@ -23,6 +23,40 @@ import requests
 from bs4 import BeautifulSoup
 from readability import Document
 
+# ---------------------------------------------------------------------------
+# Telemetry — optional; skipped silently if OTEL endpoint not configured
+# ---------------------------------------------------------------------------
+_tracer = None
+
+def _init_tracer():
+    global _tracer
+    endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
+    if not endpoint:
+        return
+    try:
+        from opentelemetry import trace
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+        from opentelemetry.sdk.resources import Resource
+        provider = TracerProvider(resource=Resource({"service.name": "audiobook-pipeline"}))
+        provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint)))
+        trace.set_tracer_provider(provider)
+        _tracer = trace.get_tracer("audiobook")
+    except Exception:
+        pass  # telemetry is best-effort
+
+def span(name, **attrs):
+    """Context manager for a trace span — no-op if tracer not initialised."""
+    if _tracer is None:
+        import contextlib
+        return contextlib.nullcontext()
+    s = _tracer.start_span(name)
+    for k, v in attrs.items():
+        s.set_attribute(k, v)
+    from opentelemetry import trace
+    return trace.use_span(s, end_on_exit=True)
+
 # Override with env vars to run from Mac against OptiPlex:
 #   KOKORO_URL=http://optiplex:8880/v1/audio/speech
 #   AUDIOBOOKS_DIR=~/audiobooks
@@ -374,10 +408,13 @@ def main() -> None:
     parser.add_argument("--voice", default="af_bella", help="Kokoro voice (default: af_bella)")
     args = parser.parse_args()
 
+    _init_tracer()
     if args.gutenberg:
-        make_gutenberg_book(args.gutenberg, args.voice)
+        with span("job", type="gutenberg", book_id=args.gutenberg, voice=args.voice):
+            make_gutenberg_book(args.gutenberg, args.voice)
     else:
-        make_article(args.url, args.voice)
+        with span("job", type="article", url=args.url, voice=args.voice):
+            make_article(args.url, args.voice)
 
 
 if __name__ == "__main__":
