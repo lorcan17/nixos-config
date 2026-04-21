@@ -1,6 +1,6 @@
 { pkgs, domain, ... }: {
   virtualisation.oci-containers.containers.audiobookrequest = {
-    image  = "ghcr.io/markbeep/audiobookrequest:latest";
+    image  = "markbeep/audiobookrequest:1";
     ports  = [ "127.0.0.1:8001:8000" ];
     volumes = [ "/var/lib/audiobookrequest:/config" ];
     environment = {
