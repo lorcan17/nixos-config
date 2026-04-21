@@ -131,6 +131,7 @@ Decision: defer until audiobook use frequency is known. Default to OpenAI TTS `t
 - [x] **AudioBookRequest** — running at books.blue-apricots.com; Prowlarr + ABS wired _(2026-04-20)_
 - [ ] **Stremio + Torrentio** — install Stremio + Mullvad on Onn Android TV box; add Torrentio addon
 - [ ] **Storage expansion** — 512GB will fill fast with movies/TV; plan NAS or external drive before it becomes urgent
+- [ ] **Private tracker seeding problem** — Mullvad discontinued port forwarding 2023-07-01; Transmission in wg-mullvad netns cannot accept inbound connections, making seeding on private trackers (e.g. MyAnonamouse) impossible. Options: (1) switch VPN provider to one with port forwarding (AirVPN, ProtonVPN); (2) split-tunnel MAM traffic outside the netns; (3) accept public-only trackers
 
 ### Tier 3 — Finance stack
 - [x] **Ghostfolio** — running; `$FMP_API_KEY` wired via agenix. _(landed 2026-04-17)_
