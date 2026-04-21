@@ -1,6 +1,6 @@
 # nix-config — Project Status
 
-> Living doc. Update when modules land or plans change. Last updated: 2026-04-18 (media stack wiring in progress; Jellyseerr rebuild + path mapping fix pending).
+> Living doc. Update when modules land or plans change. Last updated: 2026-04-20 (media stack complete; AudioBookRequest running but limited by lack of private tracker access).
 
 ---
 
@@ -71,12 +71,13 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | Prometheus | `prometheus.nix` | ✅ Running | node_exporter + Netdata + OTEL scrape configs active |
 | Grafana | `grafana.nix` | ✅ Running | grafana.blue-apricots.com; disk/CPU/memory alerts provisioned in code → ntfy |
 | Uptime Kuma | `uptime-kuma.nix` | ✅ Running | kuma.blue-apricots.com; HTTP monitors + finance heartbeats configured; ntfy wired; Transmission push monitor active |
-| Jellyfin | `jellyfin.nix` | ✅ Running | media.blue-apricots.com; setup wizard complete; Movies library → /var/lib/transmission/Downloads |
+| Jellyfin | `jellyfin.nix` | ✅ Running | media.blue-apricots.com; Movies → /var/lib/media/movies, TV → /var/lib/media/tv |
 | Byparr | `byparr.nix` | ✅ Running | Cloudflare bypass proxy for Prowlarr; localhost:8191 |
-| Prowlarr | `prowlarr.nix` | ✅ Running | Indexers configured (1337x, YTS, EZTV etc.); Byparr tag wired; synced to Radarr/Sonarr |
-| Radarr | `radarr.nix` | ⚠ Path mapping issue | Transmission download client added; root folder /var/lib/media/movies set; but Radarr expects /var/lib/transmission/Downloads/radarr (category subdir) which doesn't exist — clear the Category field in download client settings |
-| Sonarr | `sonarr.nix` | ⚠ UI config needed | sonarr.blue-apricots.com; needs Transmission download client + /var/lib/media/tv root folder |
-| Jellyseerr | `overseerr.nix` | ⚠ Rebuild needed | Swapped from Overseerr (Plex-only) to Jellyseerr; rebuild pending then run setup wizard → Jellyfin + Radarr + Sonarr |
+| Prowlarr | `prowlarr.nix` | ✅ Running | Indexers configured; synced to Radarr + Sonarr |
+| Radarr | `radarr.nix` | ✅ Running | Transmission client wired; category subdir /var/lib/transmission/Downloads/radarr; root /var/lib/media/movies |
+| Sonarr | `sonarr.nix` | ✅ Running | Transmission client wired; category subdir /var/lib/transmission/Downloads/sonarr; root /var/lib/media/tv |
+| Jellyseerr | `overseerr.nix` | ✅ Running | seer.blue-apricots.com; Jellyfin + Radarr + Sonarr connected |
+| AudioBookRequest | `audiobookrequest.nix` | ✅ Running | books.blue-apricots.com; Prowlarr + ABS wired; limited by lack of private tracker — public indexers sparse for audiobooks |
 | Backups | `backups.nix` | ⬜ Not started | Restic or borgbackup |
 | Syncthing | `syncthing.nix` | ⬜ Not started | Mac ↔ OptiPlex file sync |
 | Security hardening | `security.nix` | ⬜ Not started | fail2ban, SSH, audit rules |
@@ -123,11 +124,13 @@ Decision: defer until audiobook use frequency is known. Default to OpenAI TTS `t
 
 ### Tier 2.5 — Media stack UI config
 - [x] **Prowlarr indexers** — configured with Byparr for Cloudflare bypass; synced to Radarr/Sonarr _(2026-04-18)_
-- [ ] **Radarr path mapping fix** — in Radarr `Settings → Download Clients → Transmission`, clear the **Category** field (currently "radarr") so downloads go to `/var/lib/transmission/Downloads` directly, not a non-existent subdir
-- [ ] **Sonarr UI config** — add Transmission download client (`192.168.254.2:9091`), set root folder `/var/lib/media/tv`; clear Category field
-- [ ] **Jellyfin library update** — change Movies library path from `/var/lib/transmission/Downloads` to `/var/lib/media/movies`
-- [ ] **Jellyseerr rebuild + setup** — `nixos-rebuild switch` to activate (overseerr → jellyseerr swap); run wizard → sign in with Jellyfin at `http://localhost:8096`; connect Radarr + Sonarr
+- [x] **Radarr** — Transmission client wired; category subdirs created with group-write; root /var/lib/media/movies _(2026-04-20)_
+- [x] **Sonarr** — Transmission client wired; root /var/lib/media/tv _(2026-04-20)_
+- [x] **Jellyfin library update** — Movies → /var/lib/media/movies, TV → /var/lib/media/tv _(2026-04-20)_
+- [x] **Jellyseerr** — running at seer.blue-apricots.com; Jellyfin + Radarr + Sonarr connected _(2026-04-20)_
+- [x] **AudioBookRequest** — running at books.blue-apricots.com; Prowlarr + ABS wired _(2026-04-20)_
 - [ ] **Stremio + Torrentio** — install Stremio + Mullvad on Onn Android TV box; add Torrentio addon
+- [ ] **Storage expansion** — 512GB will fill fast with movies/TV; plan NAS or external drive before it becomes urgent
 
 ### Tier 3 — Finance stack
 - [x] **Ghostfolio** — running; `$FMP_API_KEY` wired via agenix. _(landed 2026-04-17)_
