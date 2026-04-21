@@ -122,7 +122,10 @@ Break-even on hardware vs OpenAI TTS: at $400 for a used machine and $0.40/artic
 
 Decision: defer until audiobook use frequency is known. Default to OpenAI TTS `tts-1` as a per-run opt-in (`--openai` flag) rather than committing to hardware upfront.
 
-### Tier 2.5 — Media stack UI config
+### Tier 2.5 — Priority next
+- [ ] **Vaultwarden** — self-hosted Bitwarden-compatible password manager; official Bitwarden clients on Mac, Android, browser extensions all connect to it; `services.vaultwarden` NixOS module available
+
+### Tier 2.6 — Media stack UI config
 - [x] **Prowlarr indexers** — configured with Byparr for Cloudflare bypass; synced to Radarr/Sonarr _(2026-04-18)_
 - [x] **Radarr** — Transmission client wired; category subdirs created with group-write; root /var/lib/media/movies _(2026-04-20)_
 - [x] **Sonarr** — Transmission client wired; root /var/lib/media/tv _(2026-04-20)_
