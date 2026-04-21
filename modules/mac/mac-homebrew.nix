@@ -11,6 +11,7 @@
     casks = [
       # Browser
       "firefox"
+      "google-chrome"
 
       # Terminal
       "iterm2"
