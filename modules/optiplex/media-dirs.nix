@@ -6,7 +6,7 @@
   systemd.tmpfiles.rules = [
     "d /var/lib/media/movies                      0755 radarr      radarr      - -"
     "d /var/lib/media/tv                          0755 sonarr      sonarr      - -"
-    "d /var/lib/transmission/Downloads/radarr     0755 transmission transmission - -"
-    "d /var/lib/transmission/Downloads/sonarr     0755 transmission transmission - -"
+    "d /var/lib/transmission/Downloads/radarr     0775 transmission transmission - -"
+    "d /var/lib/transmission/Downloads/sonarr     0775 transmission transmission - -"
   ];
 }
