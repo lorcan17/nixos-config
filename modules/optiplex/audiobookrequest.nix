@@ -6,7 +6,6 @@
     environment = {
       TZ = "America/Vancouver";
     };
-    extraOptions = [ "--restart=unless-stopped" ];
   };
 
   systemd.tmpfiles.rules = [
