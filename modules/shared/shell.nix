@@ -92,6 +92,7 @@
       $DRY_RUN_CMD mkdir -p "$HOME/.claude-openrouter"
       $DRY_RUN_CMD ln -sf "$HOME/.claude/CLAUDE.md" "$HOME/.claude-openrouter/CLAUDE.md"
       $DRY_RUN_CMD ln -sf "$HOME/.claude/commands" "$HOME/.claude-openrouter/commands"
+      $DRY_RUN_CMD ln -sf "$HOME/.claude/settings.json" "$HOME/.claude-openrouter/settings.json"
     '';
   };
 }
