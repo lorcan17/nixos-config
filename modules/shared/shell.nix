@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 {
   home-manager.users.lorcan = {
     programs.zsh = {
@@ -85,5 +85,13 @@
 
     # Auto-loads nix devshells per project when .envrc is present
     programs.direnv = { enable = true; nix-direnv.enable = true; };
+
+    # Share global Claude config into the OpenRouter config dir so or-claude
+    # has the same CLAUDE.md instructions and custom commands, but no credentials.
+    home.activation.claudeOpenRouterConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      $DRY_RUN_CMD mkdir -p "$HOME/.claude-openrouter"
+      $DRY_RUN_CMD ln -sf "$HOME/.claude/CLAUDE.md" "$HOME/.claude-openrouter/CLAUDE.md"
+      $DRY_RUN_CMD ln -sf "$HOME/.claude/commands" "$HOME/.claude-openrouter/commands"
+    '';
   };
 }
