@@ -41,6 +41,26 @@
           export FMP_API_KEY=$(cat /run/agenix/fmp-api-key)
         fi
 
+        or-claude() {
+          local key_file="/run/agenix/open-router-api-key"
+          if [[ ! -f "$key_file" ]]; then
+            echo "or-claude: secret not found at $key_file" >&2
+            return 1
+          fi
+          local n=$((RANDOM % 4))
+          local model
+          case $n in
+            0) model="meta-llama/llama-3.3-70b-instruct:free" ;;
+            1) model="qwen/qwen-2.5-72b-instruct:free" ;;
+            2) model="deepseek/deepseek-r1:free" ;;
+            3) model="google/gemma-3-12b-it:free" ;;
+          esac
+          echo "or-claude: $model"
+          ANTHROPIC_BASE_URL="https://openrouter.ai/api/v1" \
+          ANTHROPIC_API_KEY=$(cat "$key_file") \
+          claude --model "$model" "$@"
+        }
+
         eval "$(zoxide init zsh)"
         export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$PATH"
       '';

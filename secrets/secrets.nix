@@ -18,5 +18,6 @@ in {
   "anthropic-api-key.age".publicKeys      = [ lorcan optiplex ];
   "caddy-cf-api-token.age".publicKeys      = [ lorcan optiplex ];
   "grafana-secret-key.age".publicKeys     = [ lorcan optiplex ];
+  "open-router-api-key.age".publicKeys     = [ lorcan optiplex ];
   # caddy-domain.age and domain.age retired — domain is now a Nix var in config.nix
 }

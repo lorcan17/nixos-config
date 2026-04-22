@@ -22,6 +22,11 @@
       mode  = "0400";
       owner = "lorcan";
     };
+    open-router-api-key = {
+      file  = ../../secrets/open-router-api-key.age;
+      mode  = "0400";
+      owner = "lorcan";
+    };
     tailscale-authkey = {
       file = ../../secrets/tailscale-authkey.age;
       mode = "0400";

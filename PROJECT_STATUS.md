@@ -35,6 +35,7 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | `questrade-consumer-key` | Mac + OptiPlex | Questrade OAuth app consumer key (bootstrap only) |
 | `anthropic-api-key` | Mac + OptiPlex | Claude API for agentic pipelines |
 | `caddy-cf-api-token` | OptiPlex | Cloudflare API token for DNS-01 TLS challenge |
+| `open-router-api-key` | Mac + OptiPlex | OpenRouter API key for `or-claude` free-tier model access |
 
 **Retired secrets (`.age` files remain but are no longer decrypted):**
 - `caddy-domain` — domain is now a Nix variable in `modules/optiplex/config.nix`
