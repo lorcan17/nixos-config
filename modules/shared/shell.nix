@@ -58,6 +58,7 @@
           echo "or-claude: $model"
           ANTHROPIC_BASE_URL="https://openrouter.ai/api/v1" \
           ANTHROPIC_API_KEY=$(cat "$key_file") \
+          CLAUDE_CONFIG_DIR="$HOME/.claude-openrouter" \
           claude --model "$model" "$@"
         }
 
