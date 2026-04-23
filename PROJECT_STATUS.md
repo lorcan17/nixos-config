@@ -53,6 +53,7 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 
 | Service | Module | Status | Notes |
 |---|---|---|---|
+| Netdata | `netdata.nix` | ✅ Running | monitor.blue-apricots.com; real-time per-process monitoring |
 | Dash. | `dash.nix` | ✅ Running | dash.blue-apricots.com; modern system dashboard |
 | Ollama | `ollama.nix` | ✅ Running | CPU-only, `0.0.0.0:11434` |
 | Tailscale | `tailscale.nix` | ✅ Running | Auth key via agenix; unblocks most other services |
