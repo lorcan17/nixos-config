@@ -6,6 +6,27 @@
     owner = "grafana";
   };
 
+  # Declarative Node Exporter Full dashboard (#1860)
+  systemd.tmpfiles.rules = [
+    "d /var/lib/grafana/dashboards 0755 grafana grafana -"
+  ];
+
+  systemd.services.grafana-dashboard-node-exporter = {
+    description = "Download Node Exporter Full dashboard for Grafana";
+    wantedBy    = [ "grafana.service" ];
+    before      = [ "grafana.service" ];
+    script      = ''
+      if [ ! -f /var/lib/grafana/dashboards/node-exporter-full.json ]; then
+        ${pkgs.curl}/bin/curl -s https://grafana.com/api/dashboards/1860/revisions/37/download > /var/lib/grafana/dashboards/node-exporter-full.json
+        chown grafana:grafana /var/lib/grafana/dashboards/node-exporter-full.json
+      fi
+    '';
+    serviceConfig = {
+      Type = "oneshot";
+      User = "root";
+    };
+  };
+
   services.grafana = {
     enable = true;
 
@@ -28,6 +49,14 @@
 
     provision = {
       enable = true;
+
+      dashboards.settings = {
+        apiVersion = 1;
+        providers = [{
+          name = "node-exporter";
+          options.path = "/var/lib/grafana/dashboards";
+        }];
+      };
 
       datasources.settings = {
         apiVersion = 1;
@@ -53,6 +82,13 @@
               settings = {
                 url        = "https://ntfy.${domain}/alerts";
                 httpMethod = "POST";
+                # Mapping Grafana fields to ntfy headers for a clean push notification
+                headerName1  = "Title";
+                headerValue1 = "{{ .GroupLabels.alertname }}";
+                headerName2  = "Priority";
+                headerValue2 = "urgent";
+                headerName3  = "Tags";
+                headerValue3 = "warning,optiplex";
               };
               disableResolveMessage = false;
             }];

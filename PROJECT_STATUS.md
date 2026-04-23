@@ -79,6 +79,7 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | Sonarr | `sonarr.nix` | ✅ Running | Transmission client wired; category subdir /var/lib/transmission/Downloads/sonarr; root /var/lib/media/tv |
 | Jellyseerr | `overseerr.nix` | ✅ Running | seer.blue-apricots.com; Jellyfin + Radarr + Sonarr connected |
 | AudioBookRequest | `audiobookrequest.nix` | ✅ Running | books.blue-apricots.com; Prowlarr + ABS wired; limited by lack of private tracker — public indexers sparse for audiobooks |
+| Vaultwarden | `vaultwarden.nix` | ✅ Running | vault.blue-apricots.com; Bitwarden-compatible |
 | Backups | `backups.nix` | ⬜ Not started | Restic or borgbackup |
 | Syncthing | `syncthing.nix` | ⬜ Not started | Mac ↔ OptiPlex file sync |
 | Security hardening | `security.nix` | ⬜ Not started | fail2ban, SSH, audit rules |
@@ -124,7 +125,7 @@ Break-even on hardware vs OpenAI TTS: at $400 for a used machine and $0.40/artic
 Decision: defer until audiobook use frequency is known. Default to OpenAI TTS `tts-1` as a per-run opt-in (`--openai` flag) rather than committing to hardware upfront.
 
 ### Tier 2.5 — Priority next
-- [ ] **Vaultwarden** — self-hosted Bitwarden-compatible password manager; official Bitwarden clients on Mac, Android, browser extensions all connect to it; `services.vaultwarden` NixOS module available
+- [x] **Vaultwarden** — self-hosted Bitwarden-compatible password manager; official Bitwarden clients on Mac, Android, browser extensions all connect to it; `services.vaultwarden` NixOS module available _(landed 2026-04-22)_
 
 ### Tier 2.6 — Media stack UI config
 - [x] **Prowlarr indexers** — configured with Byparr for Cloudflare bypass; synced to Radarr/Sonarr _(2026-04-18)_

@@ -6,7 +6,8 @@
   # After first rebuild, visit https://kuma.DOMAIN and set up:
   #
   # HTTP monitors (one per subdomain):
-  #   ntfy, chat, abs, ghostfolio, monitor, grafana, prometheus
+  #   ntfy, chat, abs, ghostfolio, monitor, grafana, prometheus,
+  #   vault, media, seer, books, torrents, sonarr, radarr, prowlarr
   #
   # Push heartbeat monitors (pipelines phone home on success):
   #   questrade-extract  — expect ping every 24h Mon-Fri
