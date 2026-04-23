@@ -5,7 +5,7 @@
   services.tailscale = {
     enable      = true;
     authKeyFile = config.age.secrets.tailscale-authkey.path;
-    # extraUpFlags = [ "--ssh" ];  # enable Tailscale SSH when ready
+    extraUpFlags = [ "--ssh" ];
   };
 
   networking.firewall = {

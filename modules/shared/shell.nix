@@ -1,6 +1,6 @@
 { pkgs, lib, ... }:
 {
-  home-manager.users.lorcan = {
+  home-manager.users.lorcan = { lib, ... }: {
     programs.zsh = {
       enable                   = true;
       autosuggestion.enable    = true;
@@ -47,14 +47,21 @@
             echo "or-claude: secret not found at $key_file" >&2
             return 1
           fi
-          local n=$((RANDOM % 4))
           local model
-          case $n in
-            0) model="meta-llama/llama-3.3-70b-instruct:free" ;;
-            1) model="qwen/qwen-2.5-72b-instruct:free" ;;
-            2) model="deepseek/deepseek-r1:free" ;;
-            3) model="google/gemma-3-12b-it:free" ;;
-          esac
+          local models_file="$HOME/.config/or-claude/models"
+          # First arg can be an explicit model slug (contains a slash)
+          if [[ $# -gt 0 && "$1" == */* ]]; then
+            model="$1"
+            shift
+          elif [[ -f "$models_file" ]]; then
+            local pool count n
+            pool=$(grep -v '^#' "$models_file" | grep -v '^$')
+            count=$(echo "$pool" | wc -l | tr -d ' ')
+            n=$(( RANDOM % count + 1 ))
+            model=$(echo "$pool" | sed -n "''${n}p")
+          else
+            model="deepseek/deepseek-r1:free"
+          fi
           echo "or-claude: $model"
           ANTHROPIC_BASE_URL="https://openrouter.ai/api/v1" \
           ANTHROPIC_API_KEY=$(cat "$key_file") \
@@ -93,6 +100,16 @@
       $DRY_RUN_CMD ln -sf "$HOME/.claude/CLAUDE.md" "$HOME/.claude-openrouter/CLAUDE.md"
       $DRY_RUN_CMD ln -sf "$HOME/.claude/commands" "$HOME/.claude-openrouter/commands"
       $DRY_RUN_CMD ln -sf "$HOME/.claude/settings.json" "$HOME/.claude-openrouter/settings.json"
+      # Seed the model pool only on first run — file is yours to edit after that.
+      if [[ ! -f "$HOME/.config/or-claude/models" ]]; then
+        $DRY_RUN_CMD mkdir -p "$HOME/.config/or-claude"
+        $DRY_RUN_CMD cat > "$HOME/.config/or-claude/models" <<'EOF'
+minimax/minimax-m2.5:free
+openai/gpt-oss-120b:free
+z-ai/glm-4.5-air:free
+inclusionai/ling-2.6-flash:free
+EOF
+      fi
     '';
   };
 }

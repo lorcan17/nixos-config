@@ -6,6 +6,24 @@
 
 ---
 
+## 2026-04-22 — No third-party budgeting app as intermediary (Firefly III, Sure rejected)
+
+**Context:** Sure and Firefly III both offer features useful for personal finance: transfer matching, split transactions, recurring detection, budget tracking. Question was whether to use one as a curation UI with a daily sync into DuckDB.
+
+**Decision:** No intermediary budgeting app. All features are implemented natively in dbt within the `finance-lake` repo. See FOUNDRY.md for the full silver/gold model list.
+
+**Rationale:**
+- An intermediary app creates two systems of record: the budgeting app owns curated transactions; DuckDB becomes a derivative view. Any edit, delete, or recategorisation must sync back — fragile.
+- Sure's schema is budgeting-oriented and cannot carry Questrade position/snapshot data, meaning two SoRs for different data types regardless.
+- All Sure features (transfer matching, splits, recurring detection, budget vs actual) are replicable in dbt SQL. Transfer matching is a self-join on amount + date proximity across accounts; review queues handle the human-in-the-loop curation step.
+- The one genuine gap is an interactive review UI — handled by `silver.merchant_review_queue` and `silver.transfer_review_queue` with a lightweight admin interface (TBD).
+
+**Consequences:** `finance-lake` dbt project must implement transfer matching, split transactions, and recurring detection. Curation UI is an open decision. No new NixOS service required.
+
+**Revisit if:** The curation UI proves too expensive to build and a budgeting app's UI is genuinely the better trade-off — at that point, treat the app as UI-only and DuckDB as SoR (one-way export, not sync).
+
+---
+
 ## 2026-04-18 — Netdata removed from monitoring stack
 
 **Context:** Netdata was deployed as a supplementary system-visibility layer, with a Prometheus scrape job pointed at its `/api/v1/allmetrics` endpoint and a Caddy vhost at `monitor.{$DOMAIN}`. The web UI repeatedly returned "File does not exist, or is not accessible" despite the `web files dir` config pointing at the correct Nix store path.

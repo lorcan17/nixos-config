@@ -143,8 +143,8 @@ Decision: defer until audiobook use frequency is known. Default to OpenAI TTS `t
 - [x] **finance-digest** — daily systemd timer reads DB → Claude analysis → ntfy push. Repo: `github:lorcan17/finance-digest`. Blocked on ntfy TLS. _(landed 2026-04-17)_
 - [ ] **Caddy TLS** — DNS-01 via Cloudflare wired in code. Needs: (1) create `cf-api-token.age` secret, (2) fix plugin hash after first failed build, (3) `nixos-rebuild switch`.
 - [ ] **LLM portfolio updater** — Python job: broker CSV/PDF from a Syncthing folder → Claude API extracts activities → POST to Ghostfolio `/api/v1/order`.
-- [ ] **Bank PDF → Sure pipeline** — bank statement PDF → n8n workflow → LLM extracts transactions → structured JSON → Sure Import API. Sure is self-hosted. Consider routing bank PDFs through Paperless-ngx first (OCR + archival) before n8n picks them up.
-- [ ] **LangAlpha** — multi-agent equity research stack (LangGraph + MongoDB + Playwright + paid APIs, ~$30–80/mo realistic). Defer until finance basics are stable and Docker/Tailscale are bedded in.
+- [ ] **Project Foundry — finance data lake** — DuckDB medallion architecture (bronze/silver/gold) + dbt transformations + embedding pipeline. See [FOUNDRY.md](./FOUNDRY.md) for full spec. Repos: `questrade-extract` (existing), `bank-cc-extract` (PDF parser complete), `finance-lake` (dbt + embed-enrich, not started). Key build order: (1) DuckDB schema + permissions NixOS module, (2) finance-lake dbt project with transfer matching + merchant normalisation, (3) OpenWebUI SQL tool provisioner.
+- [ ] **LangAlpha** — multi-agent equity research stack (LangGraph + MongoDB + Playwright + paid APIs, ~$30–80/mo realistic). Defer until Foundry is stable.
 
 ### Tier 4 — PKM + household
 - [ ] **Paperless-ngx** — first-class `services.paperless` NixOS module. OCR paper docs into the PARA workflow.
@@ -181,6 +181,7 @@ Full ADR-lite entries with reasoning live in [DECISIONS.md](./DECISIONS.md). Thi
 
 | Date | Decision |
 |---|---|
+| 2026-04-22 | No third-party budgeting app (Sure/Firefly) — all features replicated in dbt; DuckDB is sole SoR |
 | 2026-04-18 | Netdata removed; node_exporter + OTEL Collector sufficient; web UI unfixable |
 | 2026-04-17 | Monitoring stack: OTEL Collector → Prometheus → Grafana → ntfy; Uptime Kuma alongside |
 | 2026-04-17 | Keep Caddy plugin + {$DOMAIN} env var; defer security.acme migration |

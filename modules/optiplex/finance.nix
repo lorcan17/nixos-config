@@ -13,6 +13,8 @@ in {
 
   systemd.services.questrade-extract = {
     description = "Questrade daily snapshot extract";
+    after       = [ "network-online.target" "tailscaled.service" ];
+    wants       = [ "network-online.target" ];
     serviceConfig = {
       Type           = "oneshot";
       User           = "lorcan";

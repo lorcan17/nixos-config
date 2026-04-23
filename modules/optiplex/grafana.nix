@@ -80,6 +80,10 @@
               {
                 uid       = "disk-high";
                 title     = "Disk usage > 85%";
+                annotations = {
+                  summary     = "Disk usage on optiplex is high: {{ $values.A.Value | printf \"%.2f\" }}%";
+                  description = "The root partition is filling up. Check for large downloads or logs.";
+                };
                 condition = "C";
                 data = [
                   {
@@ -157,6 +161,10 @@
               {
                 uid       = "memory-high";
                 title     = "Memory usage > 85%";
+                annotations = {
+                  summary     = "Memory usage on optiplex is high: {{ $values.A.Value | printf \"%.2f\" }}%";
+                  description = "Low memory available. This can cause system instability or OOM kills.";
+                };
                 condition = "C";
                 data = [
                   {
@@ -204,3 +212,4 @@
     reverse_proxy localhost:3000
   '';
 }
+
