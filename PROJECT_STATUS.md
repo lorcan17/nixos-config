@@ -1,6 +1,6 @@
 # nix-config — Project Status
 
-> Living doc. Update when modules land or plans change. Last updated: 2026-04-20 (media stack complete; AudioBookRequest running but limited by lack of private tracker access).
+> Living doc. Update when modules land or plans change. Last updated: 2026-04-22 (Vaultwarden live; Netdata re-added; storage GC automated).
 
 ---
 
@@ -128,6 +128,7 @@ Decision: defer until audiobook use frequency is known. Default to OpenAI TTS `t
 
 ### Tier 2.5 — Priority next
 - [x] **Vaultwarden** — self-hosted Bitwarden-compatible password manager; official Bitwarden clients on Mac, Android, browser extensions all connect to it; `services.vaultwarden` NixOS module available _(landed 2026-04-22)_
+- [ ] **Secure Vaultwarden** — set `SIGNUPS_ALLOWED = false` in `vaultwarden.nix` once both accounts are registered.
 
 ### Tier 2.6 — Media stack UI config
 - [x] **Prowlarr indexers** — configured with Byparr for Cloudflare bypass; synced to Radarr/Sonarr _(2026-04-18)_
