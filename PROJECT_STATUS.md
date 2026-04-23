@@ -53,6 +53,7 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 
 | Service | Module | Status | Notes |
 |---|---|---|---|
+| Dash. | `dash.nix` | ✅ Running | dash.blue-apricots.com; modern system dashboard |
 | Ollama | `ollama.nix` | ✅ Running | CPU-only, `0.0.0.0:11434` |
 | Tailscale | `tailscale.nix` | ✅ Running | Auth key via agenix; unblocks most other services |
 | Mullvad + WireGuard | `vpn.nix` | ✅ Running | `wg-mullvad` netns, Sweden exit; consumers join via `NetworkNamespacePath` |
