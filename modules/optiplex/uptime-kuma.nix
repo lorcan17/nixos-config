@@ -7,7 +7,7 @@
   #
   # HTTP monitors (one per subdomain):
   #   ntfy, chat, abs, ghostfolio, monitor, grafana, prometheus,
-  #   vault, media, seer, books, torrents, sonarr, radarr, prowlarr, dash
+  #   vault, media, seer, books, torrents, sonarr, radarr, prowlarr, dash, netdata
   #
   # Push heartbeat monitors (pipelines phone home on success):
   #   questrade-extract  — expect ping every 24h Mon-Fri

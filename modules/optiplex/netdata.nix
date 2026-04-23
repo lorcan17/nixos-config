@@ -1,10 +1,7 @@
 { domain, ... }:
 {
   # Netdata — high-resolution real-time monitoring.
-  # Available at https://monitor.blue-apricots.com (renamed from netdata subdomain per project preference)
-  #
-  # Note: Previous deployment (2026-04-18) failed because the web UI couldn't find its files.
-  # This version uses the standard services.netdata.package to ensure all paths are correctly linked.
+  # Available at https://netdata.blue-apricots.com
 
   services.netdata = {
     enable = true;
@@ -20,7 +17,7 @@
     };
   };
 
-  services.caddy.virtualHosts."monitor.${domain}".extraConfig = ''
+  services.caddy.virtualHosts."netdata.${domain}".extraConfig = ''
     import cloudflare_tls
     reverse_proxy localhost:19999
   '';
