@@ -17,7 +17,8 @@
     before      = [ "grafana.service" ];
     script      = ''
       if [ ! -f /var/lib/grafana/dashboards/node-exporter-full.json ]; then
-        ${pkgs.curl}/bin/curl -s https://grafana.com/api/dashboards/1860/revisions/37/download > /var/lib/grafana/dashboards/node-exporter-full.json
+        ${pkgs.curl}/bin/curl -s https://grafana.com/api/dashboards/1860/revisions/37/download | \
+        ${pkgs.gnused}/bin/sed 's/\${DS_PROMETHEUS}/prometheus/g' > /var/lib/grafana/dashboards/node-exporter-full.json
         chown grafana:grafana /var/lib/grafana/dashboards/node-exporter-full.json
       fi
     '';
