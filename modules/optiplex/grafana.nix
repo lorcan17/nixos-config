@@ -1,4 +1,4 @@
-{ config, domain, ... }:
+{ config, domain, pkgs, ... }:
 {
   age.secrets.grafana-secret-key = {
     file  = ../../secrets/grafana-secret-key.age;
