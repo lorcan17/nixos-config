@@ -12,6 +12,8 @@
 
       # System monitoring
       btop     # pretty htop with graphs
+      ncdu     # ncurses-based disk usage analyzer
+      diskonaut # visual disk space explorer
 
       # Network
       wget

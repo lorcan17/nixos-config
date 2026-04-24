@@ -34,6 +34,9 @@
         ports = "lsof -iTCP -sTCP:LISTEN -n -P";
         myip  = "curl -s ifconfig.me";
         install-claude-code = "claude update";
+
+        # Editors
+        code = "'/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code'";
       };
 
       initContent = ''

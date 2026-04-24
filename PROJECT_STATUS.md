@@ -1,6 +1,8 @@
 # nix-config — Project Status
 
-> Living doc. Update when modules land or plans change. Last updated: 2026-04-22 (Vaultwarden live; Netdata re-added; storage GC automated).
+> Living doc. Update when modules land or plans change. Last updated: 2026-04-23 (Foundry tracking moved into `projects/foundry/`).
+>
+> **Convention:** large, multi-repo, multi-session projects get their own `projects/<name>/` folder containing `SPEC.md`, `STATUS.md`, and `DECISIONS.md`. Smaller work stays in this file and in root `DECISIONS.md`.
 
 ---
 
@@ -147,7 +149,7 @@ Decision: defer until audiobook use frequency is known. Default to OpenAI TTS `t
 - [x] **finance-digest** — daily systemd timer reads DB → Claude analysis → ntfy push. Repo: `github:lorcan17/finance-digest`. Blocked on ntfy TLS. _(landed 2026-04-17)_
 - [ ] **Caddy TLS** — DNS-01 via Cloudflare wired in code. Needs: (1) create `cf-api-token.age` secret, (2) fix plugin hash after first failed build, (3) `nixos-rebuild switch`.
 - [ ] **LLM portfolio updater** — Python job: broker CSV/PDF from a Syncthing folder → Claude API extracts activities → POST to Ghostfolio `/api/v1/order`.
-- [ ] **Project Foundry — finance data lake** — DuckDB medallion architecture (bronze/silver/gold) + dbt transformations + embedding pipeline. See [FOUNDRY.md](./FOUNDRY.md) for full spec. Repos: `questrade-extract` (existing), `bank-cc-extract` (PDF parser complete), `finance-lake` (dbt + embed-enrich, not started). Key build order: (1) DuckDB schema + permissions NixOS module, (2) finance-lake dbt project with transfer matching + merchant normalisation, (3) OpenWebUI SQL tool provisioner.
+- [ ] **Project Foundry — finance data lake** — DuckDB medallion + dbt + embedding pipeline. Tracked in its own folder: [projects/foundry/](./projects/foundry/) (SPEC, STATUS, DECISIONS).
 - [ ] **LangAlpha** — multi-agent equity research stack (LangGraph + MongoDB + Playwright + paid APIs, ~$30–80/mo realistic). Defer until Foundry is stable.
 
 ### Tier 4 — PKM + household

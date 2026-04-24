@@ -90,6 +90,9 @@
                 headerValue2 = "urgent";
                 headerName3  = "Tags";
                 headerValue3 = "warning,optiplex";
+                # ntfy uses the Message header as the body when set, ignoring the raw Grafana JSON payload
+                headerName4  = "Message";
+                headerValue4 = "{{ .CommonAnnotations.summary }}{{ if .CommonAnnotations.description }} — {{ .CommonAnnotations.description }}{{ end }}";
               };
               disableResolveMessage = false;
             }];

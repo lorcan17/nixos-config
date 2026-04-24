@@ -9,7 +9,7 @@ Personal finance data lake on the OptiPlex. Single source of truth for all perso
 | Repo | Purpose | Output |
 |---|---|---|
 | `questrade-extract` | Questrade API → bronze snapshots | `bronze.questrade_snapshots` |
-| `bank-cc-extract` | PDF parse → bronze transactions | `bronze.bank_transactions`, `bronze.cc_transactions` |
+| `statement-extract` | PDF parse → bronze transactions | `bronze.bank_transactions`, `bronze.cc_transactions` |
 | `finance-lake` | dbt (silver + gold) + embed-enrich service | all Silver/Gold in `finance.duckdb` |
 
 One repo per source. The `finance-lake` repo is the transformation and semantic layer — it doesn't touch ingestion.
@@ -61,7 +61,7 @@ Each source runs on its own timer. Downstream steps chain via `ExecStartPost`:
 ```
 questrade-extract.service  ──┐
                               ├─→ embed-enrich.service ──→ dbt-run.service
-bank-cc-extract.service    ──┘
+statement-extract.service    ──┘
 ```
 
 `dbt-run.service` is a oneshot that runs `dbt run --select silver+ gold+` against `finance.duckdb`.
@@ -77,12 +77,12 @@ bank-cc-extract.service    ──┘
 
 ### Bank statements
 - **Type:** transaction ledger
-- **Ingestor:** `bank-cc-extract` PDF parser (complete)
+- **Ingestor:** `statement-extract` PDF parser (complete)
 - **Grain:** account × date × amount × raw description
 
 ### Credit card statements
 - **Type:** transaction ledger
-- **Ingestor:** `bank-cc-extract` PDF parser (complete)
+- **Ingestor:** `statement-extract` PDF parser (complete)
 - **Grain:** card × date × amount × raw description
 
 ---
@@ -157,5 +157,5 @@ The SQL tool has the gold-layer schema in its docstring so the model can generat
 - [ ] Curation UI — lightweight Flask/HTMX admin vs OpenWebUI-native workflow
 - [ ] Questrade transaction history — extend extractor to capture buys/sells/dividends (enables IRR, realised gains)
 - [ ] DuckDB VSS availability in nixpkgs — may need a Python package overlay for the `vss` extension
-- [ ] bank-cc-extract — which specific banks/cards; PDF format variations
+- [ ] statement-extract — which specific banks/cards; PDF format variations
 - [ ] Backup strategy for `finance.duckdb` — include in restic when `backups.nix` lands
