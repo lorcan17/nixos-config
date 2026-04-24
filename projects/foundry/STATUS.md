@@ -1,6 +1,6 @@
 # Foundry — Status
 
-> Kanban for Project Foundry (personal finance data lake). See [SPEC.md](./SPEC.md) for architecture, [DECISIONS.md](./DECISIONS.md) for ADRs. Last updated: 2026-04-23.
+> Kanban for Project Foundry (personal finance data lake). See [SPEC.md](./SPEC.md) for architecture, [DECISIONS.md](./DECISIONS.md) for ADRs. Last updated: 2026-04-24.
 
 ## In Flight
 
@@ -17,11 +17,11 @@ Full pipeline green on Mac before any NixOS work:
 ## Backlog
 
 ### Step 4 — Push repos + wire NixOS orchestration
-- Push `statement-extract` + `finance-lake` to GitHub.
-- `flake.nix` inputs + `modules/optiplex/foundry.nix`.
-- New agenix secret: `openai-api-key`.
-- systemd chain: questrade-extract + statement-extract → embed-enrich → dbt-run.
-- Uptime Kuma push monitors (manual UI).
+- [x] Push `statement-extract` + `finance-lake` to GitHub _(2026-04-24 — both public at `github:lorcan17/{statement-extract,finance-lake}`)_
+- [x] `nix-config/flake.nix` inputs wired + locked _(2026-04-24 — Mac dry-build green)_
+- [x] agenix secret `openai-api-key` _(staged in `secrets/openai-api-key.age`)_
+- [ ] `modules/optiplex/foundry.nix` — systemd chain (questrade-extract + statement-extract → embed-enrich → dbt-run).
+- [ ] Uptime Kuma push monitors (manual UI).
 
 ### Step 5 — OpenWebUI tools (OptiPlex-only)
 `finance_sql` + `finance_chart` provisioned via oneshot after rebuild. Grant `open-webui` read on `finance.duckdb`.
@@ -44,6 +44,7 @@ Real fixtures + tests are currently gitignored to avoid PII in the source tree (
 - **Step 0 — Tracking scaffolding** _(2026-04-23)_ — `projects/foundry/` folder with SPEC/STATUS/DECISIONS; root `PROJECT_STATUS.md` pointer + convention note.
 - **Step 1 — Mac DuckDB + `vss` sanity check** _(2026-04-23)_ — `duckdb` v1.4.4 from `terminal-tools.nix`; `vss` loads; HNSW index + ANN query work with `hnsw_enable_experimental_persistence = true`. ADR-004 logged.
 - **Step 2 — `finance-lake` scaffold** _(2026-04-23)_ — `~/projects/finance-lake/` with uv + dbt-duckdb, dev/prod profiles, silver models (dim_accounts, dim_merchants, fact_transactions), gold models (net_worth_daily, spending_by_category), seeds (categories, budgets), embed_enrich module with OpenAI client + HNSW ANN matcher, dev_bootstrap.py for Mac-local bronze seeding. direnv-managed OPENAI_API_KEY. git-init'd, not pushed.
+- **Step 4a — Public release of statement-extract + finance-lake** _(2026-04-24)_ — both repos pushed public at `github:lorcan17/{statement-extract,finance-lake}`. PII purge landed across all 5 parsers (dynamic holder extraction via address-block walk-up + anchor regex); 16/16 pytest + 12 real-PDF validator pass; 0-row regression vs pre-change bronze DB. finance-lake restructured into `silver/ledger/` + `gold/{analytics,positions}/` with 8 new models; 4 model bugs fixed (quality_alerts self-join, semantic_transactions ref, fact_transfers 1:1 matching + outbound-only Case C). `seeds/dim_categories.csv` now committed (generic taxonomy).
 
 ## Tech debt — embed_enrich
 

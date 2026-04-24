@@ -61,6 +61,82 @@
         "type": "github"
       }
     },
+    "finance-lake": {
+      "inputs": {
+        "flake-parts": "flake-parts",
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "statement-extract": "statement-extract"
+      },
+      "locked": {
+        "lastModified": 1777010718,
+        "narHash": "sha256-pScnHIm9NxDdQN2CtXBGIJBSqLmbT9a2rp/gvhMnjXc=",
+        "owner": "lorcan17",
+        "repo": "finance-lake",
+        "rev": "28fe1bee10ea12cf553ce39a3059f8fffd63dfb7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lorcan17",
+        "repo": "finance-lake",
+        "type": "github"
+      }
+    },
+    "flake-parts": {
+      "inputs": {
+        "nixpkgs-lib": "nixpkgs-lib"
+      },
+      "locked": {
+        "lastModified": 1775087534,
+        "narHash": "sha256-91qqW8lhL7TLwgQWijoGBbiD4t7/q75KTi8NxjVmSmA=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "3107b77cd68437b9a76194f0f7f9c55f2329ca5b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "type": "github"
+      }
+    },
+    "flake-parts_2": {
+      "inputs": {
+        "nixpkgs-lib": "nixpkgs-lib_2"
+      },
+      "locked": {
+        "lastModified": 1775087534,
+        "narHash": "sha256-91qqW8lhL7TLwgQWijoGBbiD4t7/q75KTi8NxjVmSmA=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "3107b77cd68437b9a76194f0f7f9c55f2329ca5b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "type": "github"
+      }
+    },
+    "flake-parts_3": {
+      "inputs": {
+        "nixpkgs-lib": "nixpkgs-lib_3"
+      },
+      "locked": {
+        "lastModified": 1775087534,
+        "narHash": "sha256-91qqW8lhL7TLwgQWijoGBbiD4t7/q75KTi8NxjVmSmA=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "3107b77cd68437b9a76194f0f7f9c55f2329ca5b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "type": "github"
+      }
+    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -138,6 +214,51 @@
         "type": "github"
       }
     },
+    "nixpkgs-lib": {
+      "locked": {
+        "lastModified": 1774748309,
+        "narHash": "sha256-+U7gF3qxzwD5TZuANzZPeJTZRHS29OFQgkQ2kiTJBIQ=",
+        "owner": "nix-community",
+        "repo": "nixpkgs.lib",
+        "rev": "333c4e0545a6da976206c74db8773a1645b5870a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "nixpkgs.lib",
+        "type": "github"
+      }
+    },
+    "nixpkgs-lib_2": {
+      "locked": {
+        "lastModified": 1774748309,
+        "narHash": "sha256-+U7gF3qxzwD5TZuANzZPeJTZRHS29OFQgkQ2kiTJBIQ=",
+        "owner": "nix-community",
+        "repo": "nixpkgs.lib",
+        "rev": "333c4e0545a6da976206c74db8773a1645b5870a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "nixpkgs.lib",
+        "type": "github"
+      }
+    },
+    "nixpkgs-lib_3": {
+      "locked": {
+        "lastModified": 1774748309,
+        "narHash": "sha256-+U7gF3qxzwD5TZuANzZPeJTZRHS29OFQgkQ2kiTJBIQ=",
+        "owner": "nix-community",
+        "repo": "nixpkgs.lib",
+        "rev": "333c4e0545a6da976206c74db8773a1645b5870a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "nixpkgs.lib",
+        "type": "github"
+      }
+    },
     "questrade-extract": {
       "flake": false,
       "locked": {
@@ -158,10 +279,55 @@
       "inputs": {
         "agenix": "agenix",
         "finance-digest": "finance-digest",
+        "finance-lake": "finance-lake",
         "home-manager": "home-manager_2",
         "nix-darwin": "nix-darwin",
         "nixpkgs": "nixpkgs",
-        "questrade-extract": "questrade-extract"
+        "questrade-extract": "questrade-extract",
+        "statement-extract": "statement-extract_2"
+      }
+    },
+    "statement-extract": {
+      "inputs": {
+        "flake-parts": "flake-parts_2",
+        "nixpkgs": [
+          "finance-lake",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1777010516,
+        "narHash": "sha256-h/RziAs16hnkVOwjFmOB4XSgWggij+OKpUTAFniJfIw=",
+        "owner": "lorcan17",
+        "repo": "statement-extract",
+        "rev": "c2683937f895070e000a00386c3a92986f790c17",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lorcan17",
+        "repo": "statement-extract",
+        "type": "github"
+      }
+    },
+    "statement-extract_2": {
+      "inputs": {
+        "flake-parts": "flake-parts_3",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1777010516,
+        "narHash": "sha256-h/RziAs16hnkVOwjFmOB4XSgWggij+OKpUTAFniJfIw=",
+        "owner": "lorcan17",
+        "repo": "statement-extract",
+        "rev": "c2683937f895070e000a00386c3a92986f790c17",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lorcan17",
+        "repo": "statement-extract",
+        "type": "github"
       }
     },
     "systems": {

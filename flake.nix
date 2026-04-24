@@ -8,9 +8,11 @@
     agenix             = { url = "github:ryantm/agenix"; inputs.nixpkgs.follows = "nixpkgs"; };
     questrade-extract  = { url = "github:lorcan17/questrade-extract"; flake = false; };
     finance-digest     = { url = "github:lorcan17/finance-digest"; flake = false; };
+    statement-extract  = { url = "github:lorcan17/statement-extract"; inputs.nixpkgs.follows = "nixpkgs"; };
+    finance-lake       = { url = "github:lorcan17/finance-lake"; inputs.nixpkgs.follows = "nixpkgs"; };
   };
 
-  outputs = { self, nixpkgs, nix-darwin, home-manager, agenix, questrade-extract, finance-digest }:
+  outputs = { self, nixpkgs, nix-darwin, home-manager, agenix, questrade-extract, finance-digest, statement-extract, finance-lake }:
     let
       # Auto-import every .nix file directly inside `dir` (non-recursive).
       # Used to route modules/{shared,mac,optiplex}/* into the right host.
@@ -37,7 +39,7 @@
 
     nixosConfigurations.optiplex = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
-      specialArgs = { inherit agenix; isDarwin = false; inherit questrade-extract finance-digest; };
+      specialArgs = { inherit agenix; isDarwin = false; inherit questrade-extract finance-digest statement-extract finance-lake; };
       modules = [
         home-manager.nixosModules.home-manager
         agenix.nixosModules.default
