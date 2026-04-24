@@ -13,11 +13,14 @@
       # System monitoring
       btop     # pretty htop with graphs
       ncdu     # ncurses-based disk usage analyzer
-      diskonaut # visual disk space explorer
+      dust     # visual disk usage
 
       # Network
       wget
       curl
+
+      # Git / GitHub
+      gh       # GitHub CLI
 
       # Misc
       unzip
