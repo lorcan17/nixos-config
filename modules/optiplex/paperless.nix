@@ -12,7 +12,7 @@
     enable      = true;
     address     = "127.0.0.1";
     port        = 28981;
-    consumeDir  = "/var/lib/paperless/consume";
+    consumptionDir  = "/var/lib/paperless/consume";
     mediaDir    = "/var/lib/paperless/media";
     dataDir     = "/var/lib/paperless/data";
 
