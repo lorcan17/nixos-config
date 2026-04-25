@@ -188,6 +188,7 @@ Full ADR-lite entries with reasoning live in [DECISIONS.md](./DECISIONS.md). Thi
 
 | Date | Decision |
 |---|---|
+| 2026-04-24 | Local alert-bridge translates Grafana webhooks → ntfy (Grafana 12 silently drops custom webhook headers) |
 | 2026-04-24 | Defer review UI for finance pipeline — dbt seed CSVs are the v1 review surface; revisit after 1 month |
 | 2026-04-24 | No n8n for Foundry pipeline orchestration — systemd + Python post-consume hook is sufficient |
 | 2026-04-22 | No third-party budgeting app (Sure/Firefly) — all features replicated in dbt; DuckDB is sole SoR |

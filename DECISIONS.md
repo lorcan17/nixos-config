@@ -6,6 +6,27 @@
 
 ---
 
+## 2026-04-24 — Local alert-bridge translates Grafana webhooks into clean ntfy pushes
+
+**Context:** ntfy push notifications from Grafana alerts arrived as raw JSON payload dumps on the phone, not human-readable summaries. An earlier attempt (commit 5121865) added `headerName1`/`headerValue1` settings to the Grafana webhook contact point intending to set ntfy's `Title`/`Message` headers. Re-tested empirically against Grafana 12.4.2: the `headerNameN` keys are stored in the contact-point config but **silently dropped** at send time — Grafana's outbound HTTP request only includes the standard headers (`User-Agent: Grafana`, `Content-Type: application/json`, etc.). The fix never took effect.
+
+**Decision:** Run a tiny loopback HTTP service (`modules/optiplex/alert-bridge.nix`) on `127.0.0.1:9099` that accepts Grafana's JSON webhook and re-POSTs to ntfy with proper `Title`/`Priority`/`Tags` headers and a plain-text body sourced from `commonAnnotations.summary` + `description`. Grafana's webhook URL points at the bridge; ntfy never sees Grafana's raw JSON.
+
+**Rationale:**
+- Smallest fix that actually works. Grafana already produces clean `title` and `message` strings in the JSON envelope; the bridge just unwraps them. ~50 lines of Python stdlib (`http.server` + `urllib`), no external dependencies.
+- Lives as its own module rather than inside `grafana.nix` because it's source-agnostic — Uptime Kuma, finance pipelines, or any future webhook source can route through the same bridge for consistent ntfy formatting.
+- Loopback-only, no Caddy vhost, no TLS, no auth needed. `DynamicUser`, `ProtectSystem=strict`, `NoNewPrivileges` keep the blast radius minimal.
+- Alternatives considered and rejected:
+  - **Real Alertmanager:** supports custom headers and time-based muting properly, but adds a second alerting brain (rule eval split between Grafana and Alertmanager, silences live in a separate UI). Three rules don't justify the weight yet.
+  - **Grafana notification templates:** can reshape the `message` string inside the JSON, but cannot change `Content-Type` or replace the body envelope, so ntfy still gets JSON.
+  - **Telegram-native contact point:** the Reddit thread that pointed at template-based fixes was for Grafana's *native* Telegram receiver, which has full message control. Doesn't apply to webhook→ntfy.
+
+**Consequences:** New module `modules/optiplex/alert-bridge.nix`. `grafana.nix` webhook URL changes from `https://ntfy.${domain}/alerts` to `http://127.0.0.1:9099/grafana`. ntfy push notifications now show `alertname` as the title and `summary — description` as the body. Resolved alerts get a green-check tag and lower priority. The bridge becomes a small new failure mode — if it's down, Grafana alerts vanish silently. Mitigated by `Restart=on-failure` and the existing OnFailure ntfy template (`alerts.nix`); could add an Uptime Kuma push monitor later if it ever flaps.
+
+**Revisit if:** (a) we want time-of-day muting (e.g. quiet 11pm–7am), per-severity routing trees, ad-hoc silences from the phone, or alert grouping/inhibition — at that point migrate Grafana rules to Prometheus rule files and run real Alertmanager, retiring the bridge; (b) two or more additional alert sources route through the bridge and start needing per-source logic — at that point either generalise the bridge or accept Alertmanager's weight.
+
+---
+
 ## 2026-04-24 — Defer dedicated review UI; dbt seed CSVs are the v1 review surface
 
 **Context:** The Foundry design includes `silver.merchant_review_queue` and `silver.transfer_review_queue` for rows the rule engine can't classify. Question raised whether to build a dedicated review UI (Datasette, Streamlit, Metabase, custom HTMX) up front.

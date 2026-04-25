@@ -81,18 +81,12 @@
               uid  = "ntfy-alerts";
               type = "webhook";
               settings = {
-                url        = "https://ntfy.${domain}/alerts";
+                # Routed via local alert-bridge — Grafana 12's webhook contact point
+                # silently drops custom headers (verified empirically), so a small
+                # local service translates the JSON payload into clean ntfy headers
+                # + plain-text body. See modules/optiplex/alert-bridge.nix.
+                url        = "http://127.0.0.1:9099/grafana";
                 httpMethod = "POST";
-                # Mapping Grafana fields to ntfy headers for a clean push notification
-                headerName1  = "Title";
-                headerValue1 = "{{ .GroupLabels.alertname }}";
-                headerName2  = "Priority";
-                headerValue2 = "urgent";
-                headerName3  = "Tags";
-                headerValue3 = "warning,optiplex";
-                # ntfy uses the Message header as the body when set, ignoring the raw Grafana JSON payload
-                headerName4  = "Message";
-                headerValue4 = "{{ .CommonAnnotations.summary }}{{ if .CommonAnnotations.description }} — {{ .CommonAnnotations.description }}{{ end }}";
               };
               disableResolveMessage = false;
             }];
