@@ -19,15 +19,75 @@ Full pipeline green on Mac before any NixOS work:
 ### Step 4 — Push repos + wire NixOS orchestration
 - [x] Push `statement-extract` + `finance-lake` to GitHub _(2026-04-24 — both public at `github:lorcan17/{statement-extract,finance-lake}`)_
 - [x] `nix-config/flake.nix` inputs wired + locked _(2026-04-24 — Mac dry-build green)_
-- [x] agenix secret `openai-api-key` _(staged in `secrets/openai-api-key.age`)_
-- [ ] `modules/optiplex/foundry.nix` — systemd chain (questrade-extract + statement-extract → embed-enrich → dbt-run).
-- [ ] Uptime Kuma push monitors (manual UI).
+- [x] agenix secret `openai-api-key` _(staged in `secrets/openai-api-key.age`, wired into `modules/shared/secrets.nix` 2026-04-24)_
+- [x] `modules/optiplex/foundry.nix` drafted — systemd timers for embed-enrich + finance-dbt + post-consume hook wiring _(2026-04-24)_
+- [x] `modules/optiplex/paperless.nix` drafted — Paperless-ngx as the document inbox (used by Foundry + general household paperwork) _(2026-04-24)_
+- [x] Uptime Kuma push monitors created — embed-enrich + finance-dbt push URLs wired into `foundry.nix` _(2026-04-24)_
 
-### Step 5 — OpenWebUI tools (OptiPlex-only)
+### Step 5 — Paperless-driven ingestion (REPLACES the old "systemd chain" model)
+
+**Rationale for the redesign:** instead of timer-driven extract → load → enrich → dbt, the pipeline is event-driven from the moment a PDF lands in Paperless. See [DECISIONS.md](../../DECISIONS.md) (2026-04-24 entries on n8n and review UI). Architecture:
+
+```
+PDF dropped in Paperless consume/
+    ↓
+Paperless OCR + post-consume hook fires
+    ↓
+embed-enrich-paperless-hook (auto-detect parser → parse → PATCH metadata → bronze insert)
+    ↓
+embed-enrich.timer (every 15min, picks up unenriched bronze rows)
+    ↓
+finance-dbt.timer (every 15min, offset; seeds + incremental run)
+```
+
+#### 5a — `statement-extract` repo changes
+- [ ] **Factor out auto-detect helper.** Extract shared logic from `archive.py` into a public `detect.py` module with two functions:
+  - `detect_parser(pdf: Path) -> ModuleType | None` — try each parser in turn; first one whose `parse()` succeeds without raising wins. Returns `None` if no parser matches (not a finance PDF).
+  - `derive_metadata(header) -> tuple[owner, bank_product, last4]` — single source of truth used by both `archive.reorg` and the new Paperless hook.
+- [ ] Add `bank_pdf_extract.detect` to public API (importable by finance-lake).
+- [ ] Decide validation policy: Paperless hook should call `validate_internal()` and **store issues on the bronze row** (new `validation_issues TEXT[]` column) rather than refusing to ingest. Fail-loud is wrong for downstream — better to load and flag.
+- [ ] Bump version, push, update `nix-config/flake.lock` via `nix flake update statement-extract`.
+
+#### 5b — `finance-lake` repo changes
+- [ ] **New module `embed_enrich/paperless_hook.py`.** Reads Paperless env vars (`DOCUMENT_WORKING_PATH`, `DOCUMENT_ID`), calls `detect_parser`, parses, calls `derive_metadata`, then:
+  - sha256(file) → idempotency key on bronze insert.
+  - PATCHes Paperless via REST API (`PATCH /api/documents/<id>/`): correspondent (= bank_product), custom_fields[owner], custom_fields[last4], title (`{bank} {owner} {YYYY-MM}`), created (= statement period_end). Token via env `PAPERLESS_API_TOKEN`.
+  - Inserts header + details into `bronze.{bank,cc}_transactions` with `validation_issues` populated.
+  - On `detect_parser` returning `None` → exit 0 (non-finance doc, no-op).
+- [ ] **New flake output.** `writeShellApplication` named `embed-enrich-paperless-hook` exposing the above. Reuses existing `pythonEnv`.
+- [ ] **Bronze schema migration** — add `validation_issues TEXT[]` and `source_paperless_doc_id INTEGER` columns to `bronze.bank_transactions` and `bronze.cc_transactions`. Backfill `validation_issues = []` on existing rows.
+- [ ] **dbt test** — add a `silver` test that flags rows where `validation_issues` is non-empty (warn, not error — these still load, just need attention).
+- [ ] **Rebuild script** — `scripts/rebuild_from_paperless.py`. Walks `/var/lib/paperless/media/documents/originals/**/*.pdf`, drops bronze tables, re-runs the hook path on each. For "I changed a parser, re-process everything" workflows.
+- [ ] Bump version, push, update `nix-config/flake.lock`.
+
+#### 5c — `nix-config` repo changes
+- [x] `paperless.nix` drafted (2026-04-24). _Pending: import on optiplex host + first build._
+- [x] `foundry.nix` drafted (2026-04-24). _Pending: wire `paperless-api-token` agenix secret once minted from Paperless UI._
+- [ ] Update `PAPERLESS_FILENAME_FORMAT` in `paperless.nix` to match `archive.py` layout: `{custom_fields[owner]:-_unowned}/{correspondent}/{custom_fields[last4]:-_nolast4}/{created} {title}` — so a Paperless-managed file ends up identical to a manually-archived one.
+- [ ] First `nixos-rebuild switch` on optiplex with `paperless.nix` + `foundry.nix` imported. Expect Paperless to migrate-create on first run.
+- [ ] Update `.claude/CLAUDE.md` with: Paperless service section, Foundry pipeline diagram, post-consume hook reference, agenix `openai-api-key` + `paperless-api-token` rows in PROJECT_STATUS.md secrets table.
+
+#### 5d — Paperless first-run setup (manual, UI-only)
+- [ ] Set admin password via UI; capture in agenix as `paperless-admin-password.age` (or skip — single-user instance).
+- [ ] Create custom fields: `owner` (text), `last4` (text). One-time, can't be declarative.
+- [ ] Mint API token (Profile → Edit Profile → API Token). Save as agenix secret `paperless-api-token.age`. Reference in `foundry.nix` env for the post-consume script.
+- [ ] No correspondent matching rules — leave empty. Hook is the source of truth.
+- [ ] Import Uptime Kuma HTTP monitor for `paperless.${domain}`.
+
+#### 5e — End-to-end smoke test
+- [ ] Drop one BMO chequing statement PDF (any filename, any owner) into `/var/lib/paperless/consume/`.
+- [ ] Confirm: file disappears from consume/ within ~30s; appears at `originals/lorcan/bmo_deposit_account/<last4>/...`; bronze row landed; validation_issues empty.
+- [ ] Drop one Amex joint statement (Lorcan + Grace primary/supplementary). Confirm: lands at `originals/joint/amex/...`, both holder names captured.
+- [ ] Drop a non-finance PDF (e.g. utility bill). Confirm: hook is no-op (exits 0), Paperless leaves it under `_unowned/` per filename format.
+- [ ] Wait for `embed-enrich.timer` tick. Confirm: dim_merchants populated, review_queue updated.
+- [ ] Wait for `finance-dbt.timer` tick. Confirm: gold tables refresh.
+- [ ] Trigger an OpenAI-credits-out scenario manually (revoke key briefly): confirm ntfy fires; on key restore, next tick auto-resumes.
+
+### Step 6 — OpenWebUI tools (OptiPlex-only)
 `finance_sql` + `finance_chart` provisioned via oneshot after rebuild. Grant `open-webui` read on `finance.duckdb`.
 
-### Step 6 — Housekeeping
-- Add `/var/lib/finance-lake/` to restic include list (blocked on `backups.nix`).
+### Step 7 — Housekeeping
+- Add `/var/lib/finance-lake/` and `/var/lib/paperless/` to restic include list (blocked on `backups.nix`).
 - Update root `PROJECT_STATUS.md` when Foundry lands.
 
 ### Transfer-matching (finance-lake / dbt)

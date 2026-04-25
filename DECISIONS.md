@@ -6,6 +6,42 @@
 
 ---
 
+## 2026-04-24 — Defer dedicated review UI; dbt seed CSVs are the v1 review surface
+
+**Context:** The Foundry design includes `silver.merchant_review_queue` and `silver.transfer_review_queue` for rows the rule engine can't classify. Question raised whether to build a dedicated review UI (Datasette, Streamlit, Metabase, custom HTMX) up front.
+
+**Decision:** No review UI in v1. Review is performed by editing the dbt seed files (`dim_category_rules.csv`, `dim_account_normalization.csv`, `dim_budgets.csv`) directly in the IDE; `dbt seed && dbt run` drains the queues on the next pipeline tick. Revisit after ~1 month of real pipeline output.
+
+**Rationale:**
+- ~95% of review cases are rule-shaped ("merchant X → category Y") and collapse cleanly into a seed row. Editing a CSV is faster than clicking through a UI for low-volume rule additions.
+- The seed file is already the source of truth; a UI would just be a CRUD wrapper that has to write back to the same CSV (or a separate table that merges with it — extra moving parts).
+- Building a UI before observing real review volume risks over-engineering. Cases that need row-level overrides (e.g. one Amazon charge is "household", another is "kid stuff") or pairwise judgements (transfer matching) genuinely need a UI — but only if they happen often.
+- When a UI does become worth it, the cheapest fit for this stack is Datasette (read + `datasette-edit-row` plugin) or a ~50-line Streamlit app pointed at the DuckDB file, fronted by Caddy. Heavyweight tools (Metabase, Superset) are rejected up front — Postgres-oriented and overkill.
+
+**Consequences:** No `datasette.nix` / `review-ui.nix` module yet. Review workflow documented as "edit the seed CSV, commit, dbt re-runs on next timer tick." Queue tables still ship in `finance-lake` so future UI has something to point at.
+
+**Revisit if:** After 1 month of pipeline running, the review queue exceeds ~20 rows/week, OR per-transaction overrides become routine, OR transfer-matching confirmation becomes a frequent task. At that point, add Datasette as `modules/optiplex/datasette.nix`.
+
+---
+
+## 2026-04-24 — No n8n for Foundry pipeline orchestration
+
+**Context:** Designing the trigger and orchestration layer for the Foundry pipeline (Paperless inbox → statement parse → bronze load → embed-enrich → dbt run). Question raised whether a workflow engine like n8n should sit between Paperless and the parsers, given the apparent complexity of the chain.
+
+**Decision:** No n8n. Orchestration is a Paperless `PAPERLESS_POST_CONSUME_SCRIPT` hook (Python, ~80 lines) plus two scheduled systemd timers (`embed-enrich.timer`, `dbt.timer`). All declared in `modules/optiplex/foundry.nix`.
+
+**Rationale:**
+- The flow is one trigger source (Paperless), one language (Python), one branch point (bank classifier, already implemented in `parsers/_holders.py`). n8n's strengths — heterogeneous SaaS integrations, visual editing for non-technical users, complex retry/branching topologies — don't apply.
+- n8n stores workflow definitions as JSON blobs in its own SQLite DB, which would sit outside the nix-config flake and break the declarative-everything property of the homelab.
+- Every primitive n8n would provide is already available natively: `OnFailure = ntfy-alert@%n.service` for alerting, `Restart=on-failure` for retries, journald + Grafana for observability, Uptime Kuma push for "silently stopped" detection.
+- Adding n8n would introduce another service to maintain, a webhook hop between Paperless and the parser (new failure mode), and a UI to babysit — net negative.
+
+**Consequences:** `foundry.nix` implements the post-consume hook + two timers directly. Paperless gets its own module (`paperless.nix`) since it will be reused for non-finance documents. No new orchestration service. Parser is invoked once per document and produces both the Paperless metadata PATCH and the bronze row in a single pass (sha256 idempotency).
+
+**Revisit if:** Three or more additional document/data sources arrive (e.g. Plaid pull, broker portal scrape, email-attachment ingest) AND each needs its own auth/retry/rate-limit logic AND a non-technical user (Grace) needs to edit flows visually. At that point a workflow engine starts paying for itself.
+
+---
+
 ## 2026-04-22 — No third-party budgeting app as intermediary (Firefly III, Sure rejected)
 
 **Context:** Sure and Firefly III both offer features useful for personal finance: transfer matching, split transactions, recurring detection, budget tracking. Question was whether to use one as a curation UI with a daily sync into DuckDB.

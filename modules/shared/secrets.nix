@@ -27,6 +27,11 @@
       mode  = "0400";
       owner = "lorcan";
     };
+    openai-api-key = {
+      file  = ../../secrets/openai-api-key.age;
+      mode  = "0400";
+      owner = "lorcan";
+    };
     tailscale-authkey = {
       file = ../../secrets/tailscale-authkey.age;
       mode = "0400";

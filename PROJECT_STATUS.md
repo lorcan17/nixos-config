@@ -141,6 +141,7 @@ Decision: defer until audiobook use frequency is known. Default to OpenAI TTS `t
 - [x] **AudioBookRequest** — running at books.blue-apricots.com; Prowlarr + ABS wired _(2026-04-20)_
 - [ ] **Stremio + Torrentio** — install Stremio + Mullvad on Onn Android TV box; add Torrentio addon
 - [ ] **Storage expansion** — 512GB will fill fast with movies/TV; plan NAS or external drive before it becomes urgent
+- [ ] **Enable "Remove Completed Downloads" in Radarr + Sonarr** — one-time UI toggle (Settings → Download Clients). Without it, completed torrents accumulate in `/var/lib/transmission/Downloads` forever (hit 171G / 94% disk on 2026-04-23). Optional follow-up: add a ratio/idle-seeding limit to `torrenting.nix` to stop indefinite seeding.
 - [ ] **Private tracker seeding problem** — Mullvad discontinued port forwarding 2023-07-01; Transmission in wg-mullvad netns cannot accept inbound connections, making seeding on private trackers (e.g. MyAnonamouse) impossible. Options: (1) switch VPN provider to one with port forwarding (AirVPN, ProtonVPN); (2) split-tunnel MAM traffic outside the netns; (3) accept public-only trackers
 
 ### Tier 3 — Finance stack
@@ -187,6 +188,8 @@ Full ADR-lite entries with reasoning live in [DECISIONS.md](./DECISIONS.md). Thi
 
 | Date | Decision |
 |---|---|
+| 2026-04-24 | Defer review UI for finance pipeline — dbt seed CSVs are the v1 review surface; revisit after 1 month |
+| 2026-04-24 | No n8n for Foundry pipeline orchestration — systemd + Python post-consume hook is sufficient |
 | 2026-04-22 | No third-party budgeting app (Sure/Firefly) — all features replicated in dbt; DuckDB is sole SoR |
 | 2026-04-18 | Netdata removed; node_exporter + OTEL Collector sufficient; web UI unfixable |
 | 2026-04-17 | Monitoring stack: OTEL Collector → Prometheus → Grafana → ntfy; Uptime Kuma alongside |
