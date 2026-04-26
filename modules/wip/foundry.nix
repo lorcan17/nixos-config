@@ -1,35 +1,19 @@
 { pkgs, config, domain, statement-extract, finance-lake, ... }:
 let
-  system     = pkgs.stdenv.hostPlatform.system;
-  parserPkg  = statement-extract.packages.${system}.default;
-  lakePkg    = finance-lake.packages.${system}.default;
+  system  = pkgs.stdenv.hostPlatform.system;
+  lakePkg = finance-lake.packages.${system}.default;
 
-  pythonEnv  = pkgs.python3.withPackages (ps: with ps; [
-    requests
-    duckdb
-    pdfplumber
-  ]);
-
-  # Post-consume hook — Paperless invokes this for every newly-ingested doc.
-  # Responsibilities:
-  #   1. Run statement-extract classifier on the doc to detect (bank, owner, period).
-  #   2. If classifier returns "not a finance statement" → exit 0 (no-op).
-  #   3. PATCH Paperless metadata (correspondent, custom_fields[owner], title, created)
-  #      so PAPERLESS_FILENAME_FORMAT auto-files it under originals/<bank>/<owner>/<year>/...
-  #   4. Insert parsed rows into bronze, idempotent on sha256(file).
-  # Paperless passes the file path + DOCUMENT_ID + an API token via env (see service env).
-  # Hook lives in finance-lake (it owns the bronze schema + duckdb_conn) and
-  # imports parsers from the bank_pdf_extract package. New entry-point to add:
-  #   embed_enrich/paperless_hook.py  (module: embed_enrich.paperless_hook)
-  # Receives Paperless env vars, auto-detects bank, parses, PATCHes paperless
-  # metadata, inserts into bronze (idempotent on sha256).
+  # Post-consume hook — Paperless invokes for every newly-OCR'd doc.
+  # Hook (in finance-lake) auto-detects parser, parses, inserts header+detail
+  # rows into bronze (idempotent on sha256), and PATCHes Paperless metadata
+  # so PAPERLESS_FILENAME_FORMAT auto-files the doc.
   postConsume = pkgs.writeShellScript "paperless-post-consume" ''
     set -euo pipefail
     export FINANCE_DUCKDB="/var/lib/finance-lake/finance.duckdb"
-    export PAPERLESS_API_URL="http://127.0.0.1:28981/api"
-    export PAPERLESS_API_TOKEN="$(cat /run/agenix/paperless-api-token)"
-    # Paperless ≥2.0 sets DOCUMENT_FILE_NAME, DOCUMENT_SOURCE_PATH, DOCUMENT_ID, DOCUMENT_WORKING_PATH
-    exec ${lakePkg}/bin/embed-enrich-paperless-hook
+    export PAPERLESS_URL="http://127.0.0.1:28981"
+    export PAPERLESS_API_TOKEN="$(cat ${config.age.secrets.paperless-api-token.path})"
+    export DIM_HOLDERS_CSV="/var/lib/finance-lake/seeds/dim_holders.csv"
+    exec ${lakePkg}/bin/ingest-paperless-hook
   '';
 in {
   age.secrets.openai-api-key.owner = "lorcan";
@@ -103,7 +87,7 @@ in {
       ExecStartPre = pkgs.writeShellScript "finance-dbt-pre" ''
         # Seeds that are gitignored (PII / personal taxonomy) live outside the
         # Nix store. Copy them into the dbt project tree before each run.
-        for f in dim_budgets.csv dim_category_rules.csv dim_account_normalization.csv; do
+        for f in dim_budgets.csv dim_category_rules.csv dim_account_normalization.csv dim_holders.csv; do
           if [ -f /var/lib/finance-lake/seeds/$f ]; then
             install -m 0640 /var/lib/finance-lake/seeds/$f \
               /var/lib/finance-lake/dbt/seeds/$f

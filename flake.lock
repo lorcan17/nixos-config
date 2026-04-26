@@ -70,11 +70,11 @@
         "statement-extract": "statement-extract"
       },
       "locked": {
-        "lastModified": 1777010718,
-        "narHash": "sha256-pScnHIm9NxDdQN2CtXBGIJBSqLmbT9a2rp/gvhMnjXc=",
+        "lastModified": 1777173891,
+        "narHash": "sha256-/lkR/vEk7Rv/7HixawTBC6ITUkvI9Ucuwjdkkk4PtbU=",
         "owner": "lorcan17",
         "repo": "finance-lake",
-        "rev": "28fe1bee10ea12cf553ce39a3059f8fffd63dfb7",
+        "rev": "55e322349180c9229c7465fc5c4f1e0327a6af47",
         "type": "github"
       },
       "original": {
@@ -317,11 +317,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1777010516,
-        "narHash": "sha256-h/RziAs16hnkVOwjFmOB4XSgWggij+OKpUTAFniJfIw=",
+        "lastModified": 1777167296,
+        "narHash": "sha256-zSHTTHbx8vU+ibZYkoF8qf/EP3H2tqHzWCJ5oXgTJMI=",
         "owner": "lorcan17",
         "repo": "statement-extract",
-        "rev": "c2683937f895070e000a00386c3a92986f790c17",
+        "rev": "a1dce3235abcd955cd13dc1baa6a3a5b4b74544c",
         "type": "github"
       },
       "original": {

@@ -105,3 +105,40 @@ Thresholds widened from `≤0.15 / ≥0.30` to `≤0.22 / ≥0.35` to reflect te
 - Mac becomes Foundry's primary dev environment — fine for single-author project.
 - Bronze-on-Mac requires a short-lived bootstrap script (`scp` + `ATTACH`) — lives in `finance-lake/scripts/dev_bootstrap.py`, not shipped to prod.
 - Sidesteps Tier 1.5 WIP workflow decision for Foundry specifically; that decision can still be made separately for other pipelines.
+
+---
+
+## ADR-006 — Bronze rebuild over migration
+
+**Date:** 2026-04-25
+**Status:** Accepted
+
+**Context.** Step 5b adds new columns to `bronze.{bank,cc}_transactions` (`source_type`, `source_id`, `sha256`, `validation_issues`) and renames `owner` → `holder`. STATUS.md originally listed a backfill migration. Bronze is small (<10k rows) and re-derivable from PDFs.
+
+**Decision.** Drop and recreate bronze on every rebuild rather than migrate in place. `scripts/ingest_statements.py` copies `finance.duckdb` to a timestamped `.bak.<ts>` sibling before any destructive op so post-run row counts and column distributions can be diffed against the prior run.
+
+**Consequences.**
+- No migration code to maintain or test.
+- Schema evolution is just a code edit + rerun; rollback is a `cp` of the backup.
+- Backup file accumulates — housekeeping should prune `*.bak.*` >30 days old (deferred).
+- Once finance-lake gains an event-sourced rebuild from cold storage (Step 5b's `rebuild_from_storage.py`), the local archive walk becomes one of several rebuild sources and the same backup discipline applies.
+
+---
+
+## ADR-007 — `dbt-duckdb` packaging path (deferred)
+
+**Date:** 2026-04-25
+**Status:** Open
+
+**Context.** Step 5c brings `finance-lake.packages.${system}.default` (which embeds `dbt-duckdb` in `pythonEnv`) into optiplex's NixOS configuration via `foundry.nix`. Pinned nixpkgs lacks `python312Packages.dbt-duckdb`, so `nix eval .#nixosConfigurations.optiplex` fails. While unresolved, `foundry.nix` is parked in `modules/wip/` to keep the rest of optiplex buildable.
+
+**Options.**
+- **(a) Overlay-side derivation.** Write a tiny `dbt-duckdb` package in `modules/shared/overlays/` using `buildPythonPackage` against the upstream PyPI tarball. Most isolated, ~30 lines.
+- **(b) Bump nixpkgs.** Update flake input — may pull other unrelated changes; risk of churn elsewhere.
+- **(c) Community overlay (`dbt-utils`/etc).** Survey existing third-party flakes before reinventing.
+
+**Decision (deferred).** Pick after a survey pass. (a) is the safe default if the survey turns up nothing.
+
+**Consequences.**
+- `foundry.nix` cannot land on optiplex until this is closed.
+- Mac dev loop unaffected — Mac uses `uv` directly.

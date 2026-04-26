@@ -27,14 +27,14 @@
       PAPERLESS_CONSUMER_SUBDIRS_AS_TAGS = false;
 
       # Files re-file automatically when correspondent / custom_fields change.
-      # Finance docs land at: originals/<bank>/<owner>/<year>/<title>.pdf
-      # Non-finance docs fall back to: originals/<correspondent>/<year>/<title>.pdf
-      PAPERLESS_FILENAME_FORMAT  = "{correspondent}/{custom_fields[owner]:-_unowned}/{created_year}/{created} {title}";
+      # Layout matches statement-extract's archive.py:
+      #   originals/<owner>/<correspondent>/<last4>/<created> <title>.pdf
+      # Non-finance docs fall back to _unowned / _nolast4 buckets.
+      PAPERLESS_FILENAME_FORMAT  = "{custom_fields[owner]:-_unowned}/{correspondent}/{custom_fields[last4]:-_nolast4}/{created} {title}";
       PAPERLESS_FILENAME_FORMAT_REMOVE_NONE = true;
 
-      # Post-consume hook is wired in foundry.nix; Paperless reads this env var.
-      # Disabled until finance-lake ships `embed-enrich-paperless-hook` (Step 5b).
-      # PAPERLESS_POST_CONSUME_SCRIPT = "/etc/paperless/post-consume.sh";
+      # Hook script written to /etc by foundry.nix.
+      PAPERLESS_POST_CONSUME_SCRIPT = "/etc/paperless/post-consume.sh";
     };
   };
 

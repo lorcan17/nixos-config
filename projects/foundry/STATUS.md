@@ -33,7 +33,7 @@ PDF dropped in Paperless consume/
     ↓
 Paperless OCR + post-consume hook fires
     ↓
-embed-enrich-paperless-hook (auto-detect parser → parse → PATCH metadata → bronze insert)
+ingest-paperless-hook (auto-detect parser → parse → PATCH metadata → bronze insert)
     ↓
 embed-enrich.timer (every 15min, picks up unenriched bronze rows)
     ↓
@@ -41,31 +41,78 @@ finance-dbt.timer (every 15min, offset; seeds + incremental run)
 ```
 
 #### 5a — `statement-extract` repo changes
-- [ ] **Factor out auto-detect helper.** Extract shared logic from `archive.py` into a public `detect.py` module with two functions:
-  - `detect_parser(pdf: Path) -> ModuleType | None` — try each parser in turn; first one whose `parse()` succeeds without raising wins. Returns `None` if no parser matches (not a finance PDF).
-  - `derive_metadata(header) -> tuple[owner, bank_product, last4]` — single source of truth used by both `archive.reorg` and the new Paperless hook.
-- [ ] Add `bank_pdf_extract.detect` to public API (importable by finance-lake).
-- [ ] Decide validation policy: Paperless hook should call `validate_internal()` and **store issues on the bronze row** (new `validation_issues TEXT[]` column) rather than refusing to ingest. Fail-loud is wrong for downstream — better to load and flag.
-- [ ] Bump version, push, update `nix-config/flake.lock` via `nix flake update statement-extract`.
+- [x] **Factor out auto-detect helper** _(2026-04-25)_ — `detect.py` exposes `PARSERS`, `detect_parser`, `derive_metadata`. Returns raw holder string; owner-key mapping is a caller concern.
+- [x] Add `bank_pdf_extract.detect` to public API.
+- [x] Validation policy resolved — all six parsers already returned `list[str]` (no raising), so no parser-side change needed. Issues recorded on bronze rows in 5b.
+- [x] Bump 0.0.1 → 0.1.0, pushed, `nix-config/flake.lock` updated _(2026-04-25)_.
 
-#### 5b — `finance-lake` repo changes
-- [ ] **New module `embed_enrich/paperless_hook.py`.** Reads Paperless env vars (`DOCUMENT_WORKING_PATH`, `DOCUMENT_ID`), calls `detect_parser`, parses, calls `derive_metadata`, then:
-  - sha256(file) → idempotency key on bronze insert.
-  - PATCHes Paperless via REST API (`PATCH /api/documents/<id>/`): correspondent (= bank_product), custom_fields[owner], custom_fields[last4], title (`{bank} {owner} {YYYY-MM}`), created (= statement period_end). Token via env `PAPERLESS_API_TOKEN`.
-  - Inserts header + details into `bronze.{bank,cc}_transactions` with `validation_issues` populated.
-  - On `detect_parser` returning `None` → exit 0 (non-finance doc, no-op).
-- [ ] **New flake output.** `writeShellApplication` named `embed-enrich-paperless-hook` exposing the above. Reuses existing `pythonEnv`.
-- [ ] **Bronze schema migration** — add `validation_issues TEXT[]` and `source_paperless_doc_id INTEGER` columns to `bronze.bank_transactions` and `bronze.cc_transactions`. Backfill `validation_issues = []` on existing rows.
-- [ ] **dbt test** — add a `silver` test that flags rows where `validation_issues` is non-empty (warn, not error — these still load, just need attention).
-- [ ] **Rebuild script** — `scripts/rebuild_from_paperless.py`. Walks `/var/lib/paperless/media/documents/originals/**/*.pdf`, drops bronze tables, re-runs the hook path on each. For "I changed a parser, re-process everything" workflows.
-- [ ] Bump version, push, update `nix-config/flake.lock`.
+#### 5b — `finance-lake` repo changes (storage-agnostic ingestion)
+
+**Design principle: bronze is the system of record; storage (Paperless / S3 / Drive / local) is a file cache.** Hexagonal layering — a storage-agnostic core with thin adapters per backend. Avoids coupling to Paperless so we can switch storage later without touching parsing/bronze logic.
+
+**Repo layout** — ingestion is its own top-level folder in `finance-lake`, peer to `embed_enrich/`. Conceptually separate concerns (parsing/loading vs merchant normalisation), but same repo since they share the bronze schema as a contract:
+```
+finance-lake/
+  ingest/
+    core.py         # ingest_pdf(file, source, con) → IngestResult
+    sources.py      # SourceRef, IngestResult dataclasses
+    adapters/
+      paperless.py
+      local.py
+      s3.py         # future
+      gdrive.py     # future
+  embed_enrich/     # unchanged — only merchant normalisation
+  models/           # dbt
+  seeds/
+```
+
+- [x] **Core ingestion module `ingest/core.py` (storage-agnostic).** _(2026-04-25)_ Public surface:
+  ```python
+  @dataclass(frozen=True)
+  class SourceRef:
+      type: Literal["paperless", "s3", "gdrive", "local", "manual"]
+      id: str  # opaque id in that backend (paperless doc_id, s3 key, gdrive file_id, abs path)
+
+  def ingest_pdf(file_path: Path, source: SourceRef, con) -> IngestResult: ...
+  ```
+  - Calls `detect_parser` → `parse` → `validate_internal` (issues recorded, not fatal) → `derive_metadata`.
+  - Computes `sha256(file)` as idempotency key.
+  - Inserts header + details into `bronze.{bank,cc}_transactions` with `(source_type, source_id, sha256, validation_issues, ...)`.
+  - Returns `IngestResult{was_finance_doc, bank, owner, last4, period_start, period_end, validation_issues, was_new_row}`.
+  - Knows nothing about Paperless / S3 / any storage backend.
+
+- [x] **Adapter contract.** _(2026-04-25 — local + paperless adapters land; s3/gdrive deferred)_
+  ```python
+  def fetch(source: SourceRef) -> Path: ...   # download to a local tmp path
+  def writeback(source: SourceRef, result: IngestResult) -> None: ...  # optional metadata sync
+  ```
+  Lets the rebuild script re-pull a doc from any backend years later (parser bug fix, schema change). Cheap now, expensive to retrofit.
+
+- [x] **Paperless adapter `ingest/adapters/paperless.py`.** _(2026-04-25 — uses httpx, lazy field-id lookup, joint detection from "/" in holder, env-driven holder→owner map)_ Reads `DOCUMENT_WORKING_PATH`, `DOCUMENT_ID` from env; constructs `SourceRef("paperless", doc_id)`; calls `ingest_pdf`; if `result.was_finance_doc`, PATCHes Paperless via REST (correspondent, custom_fields[owner|last4], title, created). API token via env `PAPERLESS_API_TOKEN`; if unset, skip the PATCH (dry-run / migration mode).
+
+- [ ] **Bank detection optimisation** _(deferred — current PDF-open detect is fast enough; revisit if Paperless OCR backlog grows)_. Use `DOCUMENT_CONTENT` env var (Paperless's pre-OCR'd text) for the parser auto-detect step where available — string-contains anchors against bank-identifying text. Falls back to opening the PDF with pdfplumber when content isn't supplied (S3, local, manual).
+
+- [x] **New flake output `ingest-paperless-hook`** _(2026-04-25)_. Future `ingest-s3-watcher` etc. follow the same pattern.
+
+- [x] **Bronze schema rebuild (not migration — see ADR-006).** _(2026-04-25)_ Drop + recreate with new columns: `source_type`, `source_id`, `sha256`, `validation_issues VARCHAR[]`. Owner column dropped; holder is the raw header string. `scripts/ingest_statements.py` backs up `finance.duckdb` first.
+- [x] **dbt model rename** owner→holder, source_pdf→sha256 across `fact_transactions`, `dim_accounts`, `data_completeness`. _(2026-04-25 — silver+gold green: 15 models, 17 tests pass; 6734 fact rows from 341 PDFs.)_
+- [x] **dim_accounts dedup** — joint cards yield one bronze row per supplementary holder; collapsed to one row per `(source_system, account_id)` with `any_value(holder)` to stop fact_transactions left-join fan-out. _(2026-04-25)_
+- [ ] **dbt warn-test on non-empty `validation_issues`** — defer until first prod run shows real-world false-positive rate (12 bank rows + 365 cc rows currently flagged on the dev DB).
+- [ ] **Generalised rebuild script `scripts/rebuild_from_storage.py`** — defer until S3 or another second backend is wired; current `ingest_statements.py` covers the local case.
+- [x] Bump 0.1.0 → 0.2.0, pushed, `nix-config/flake.lock` updated _(2026-04-25)_.
 
 #### 5c — `nix-config` repo changes
-- [x] `paperless.nix` drafted (2026-04-24). _Pending: import on optiplex host + first build._
-- [x] `foundry.nix` drafted (2026-04-24). _Pending: wire `paperless-api-token` agenix secret once minted from Paperless UI._
-- [ ] Update `PAPERLESS_FILENAME_FORMAT` in `paperless.nix` to match `archive.py` layout: `{custom_fields[owner]:-_unowned}/{correspondent}/{custom_fields[last4]:-_nolast4}/{created} {title}` — so a Paperless-managed file ends up identical to a manually-archived one.
-- [ ] First `nixos-rebuild switch` on optiplex with `paperless.nix` + `foundry.nix` imported. Expect Paperless to migrate-create on first run.
-- [ ] Update `.claude/CLAUDE.md` with: Paperless service section, Foundry pipeline diagram, post-consume hook reference, agenix `openai-api-key` + `paperless-api-token` rows in PROJECT_STATUS.md secrets table.
+- [x] `paperless.nix` — post-consume hook wired (`PAPERLESS_POST_CONSUME_SCRIPT = /etc/paperless/post-consume.sh`); `PAPERLESS_FILENAME_FORMAT` updated to `{custom_fields[owner]:-_unowned}/{correspondent}/{custom_fields[last4]:-_nolast4}/{created} {title}` matching `archive.py`. _(2026-04-25)_
+- [x] `foundry.nix` post-consume script env updated: `PAPERLESS_URL`, `PAPERLESS_API_TOKEN` (agenix), `FINANCE_DUCKDB`, `DIM_HOLDERS_CSV`. Seed-copy step adds `dim_holders.csv`. _(2026-04-25)_
+- [x] `paperless-api-token.age` agenix secret declared, owner=paperless. _(2026-04-25)_
+- [ ] **BLOCKER — `dbt-duckdb` missing from pinned nixpkgs `python312Packages`** (see ADR-007). `nix eval .#nixosConfigurations.optiplex...` fails. `foundry.nix` parked back in `modules/wip/` so optiplex rebuilds still succeed. Resolution options: (a) overlay `python312Packages.dbt-duckdb` with a manual derivation; (b) update nixpkgs flake input; (c) fetch from a community overlay. Until resolved, finance-lake's flake output cannot be referenced from a NixOS module.
+- [ ] First `nixos-rebuild switch` on optiplex once dbt-duckdb resolved + `foundry.nix` moved back to `optiplex/`. Expect Paperless to migrate-create on first run.
+- [ ] Update `.claude/CLAUDE.md` with: Paperless section, Foundry pipeline diagram, post-consume hook reference.
+
+#### 5d — Paperless first-run setup
+- [x] Custom fields `owner` + `last4` created (manual UI step done by user).
+- [x] API token minted, saved as `secrets/paperless-api-token.age`.
+- [ ] Add Uptime Kuma HTTP monitor for `paperless.${domain}` (deferred — UI step).
 
 #### 5d — Paperless first-run setup (manual, UI-only)
 - [ ] Set admin password via UI; capture in agenix as `paperless-admin-password.age` (or skip — single-user instance).
@@ -92,6 +139,9 @@ finance-dbt.timer (every 15min, offset; seeds + incremental run)
 
 ### Transfer-matching (finance-lake / dbt)
 Inter-account transfers (e.g. BMO chequing → EQ savings) currently inflate `gold.spending_by_category`. Add a silver concern that pairs opposite-sign, same-amount transactions across accounts within ±N days, exposed either as `dim_transfers` or a `fact_transactions.is_transfer` flag. Then filter `where not is_transfer` in `gold/spending_by_category.sql` (TODO already noted at line 3). Defer until ≥3 months of prod data exist to tune the matching window empirically.
+
+### statement-extract — coast_capital_chequing returns empty accounts on some PDFs
+`joint/coast_capital_chequing/October 2024 - Monthly eStatement.pdf` parses without raising but produces a `MultiAccountDepositStatement` with `accounts=[]`. `ingest.core` now treats this as not-a-finance-doc and tags `multi_account_no_accounts` in `validation_issues`, so the rebuild doesn't fail — but the parser should be fixed. Likely a layout edge case in the October 2024 statement (page-break or section anchor change).
 
 ### statement-extract — synthetic fixture generator (Option B)
 Single Python script using `reportlab` to emit paired `(pdf, csv, expected.json)` from a list of fake transactions, mimicking BMO/Amex/EQ layouts. Lets tests and CI run without real PII. ~½ day per format; revisit when CI is wanted or when contributors are added.
