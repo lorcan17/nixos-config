@@ -9,6 +9,11 @@ let
   # so PAPERLESS_FILENAME_FORMAT auto-files the doc.
   postConsume = pkgs.writeShellScript "paperless-post-consume" ''
     set -euo pipefail
+    # Paperless runs on python 3.13 and exports PYTHONPATH pointing at its
+    # 3.13 site-packages. Our hook is a python 3.12 env; without unsetting,
+    # imports like `cryptography` resolve to paperless's 3.13 wheel and
+    # crash on ABI-incompatible C extensions.
+    unset PYTHONPATH
     export FINANCE_DUCKDB="/var/lib/finance-lake/finance.duckdb"
     export PAPERLESS_URL="http://127.0.0.1:28981"
     export PAPERLESS_API_TOKEN="$(cat ${config.age.secrets.paperless-api-token.path})"
