@@ -42,6 +42,11 @@ in {
     "d /var/lib/finance-lake          0770 lorcan paperless -"
     "d /var/lib/finance-lake/seeds    0770 lorcan paperless -"
     "d /var/lib/finance-lake/dbt      0770 lorcan paperless -"
+    # finance.duckdb must be group-writable: created by lorcan (embed-enrich /
+    # dbt), then mutated by paperless (the post-consume ingest hook).
+    # `Z` recursively normalises mode + ownership on existing files too, so a
+    # file lorcan creates with default umask gets fixed up on next service tick.
+    "Z /var/lib/finance-lake          0770 lorcan paperless -"
   ];
 
   users.users.lorcan.extraGroups = [ "paperless" ];
@@ -59,6 +64,7 @@ in {
     serviceConfig = {
       Type      = "oneshot";
       User      = "lorcan";
+      UMask     = "0007";  # files default to 0660 so paperless (group) can write
       ExecStart = pkgs.writeShellScript "embed-enrich-run" ''
         export OPENAI_API_KEY="$(cat ${config.age.secrets.openai-api-key.path})"
         export FINANCE_DUCKDB="/var/lib/finance-lake/finance.duckdb"
@@ -89,6 +95,7 @@ in {
     serviceConfig = {
       Type      = "oneshot";
       User      = "lorcan";
+      UMask     = "0007";  # files default to 0660 so paperless (group) can write
       ExecStartPre = pkgs.writeShellScript "finance-dbt-pre" ''
         # Seeds that are gitignored (PII / personal taxonomy) live outside the
         # Nix store. Copy them into the dbt project tree before each run.
