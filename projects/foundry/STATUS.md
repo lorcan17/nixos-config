@@ -144,6 +144,21 @@ PR [#457151](https://github.com/NixOS/nixpkgs/pull/457151) is stale (~3 months) 
 
 ### Step 6 — OpenWebUI tools (OptiPlex-only)
 `finance_sql` + `finance_chart` provisioned via oneshot after rebuild. Grant `open-webui` read on `finance.duckdb`.
+- `finance_sql(query)` — runs read-only SQL against `/var/lib/finance-lake/finance.duckdb`, returns rows.
+- `finance_describe()` — returns silver/gold schema hints to prime the model.
+- Tool docstrings carry schema cheat-sheet (column names, units, grain) — accuracy depends on these. Pair with Claude Sonnet 4.6 via the OpenWebUI Anthropic connector; smaller local Ollama models miss the joins.
+
+### Dashboard UI — Evidence
+Pick Evidence (`evidence.dev`) over Metabase/Superset: markdown + SQL → static dashboard, native DuckDB support, single binary. Plan:
+- `modules/optiplex/evidence.nix` — systemd timer runs `evidence build` against `finance.duckdb` (read-only mount), output served via Caddy at `finance.${domain}` (cloudflare TLS snippet, tailscale-only).
+- Initial pages: net worth over time (gold.net_worth_daily), spending by category, recent transactions, review-queue counts.
+- Tradeoff vs Metabase: no ad-hoc UI exploration — but dashboards-as-code matches the PARA + git workflow.
+
+### Complete reingest workflow
+`scripts/ingest_statements.py` already does this (per ADR-006): backup duckdb, drop+recreate bronze, walk a local archive, re-ingest every PDF through `ingest_pdf`. Currently Mac-only (script lives in repo but isn't in `flake#packages.default`). To productionise:
+- Add `ingest-statements-rebuild` shellApplication wrapper to `finance-lake/flake.nix`.
+- One-shot systemd unit `foundry-rebuild.service` (manual trigger, not timer) that runs against `/var/lib/paperless/media/documents/originals/` as the source of truth.
+- Until then: run on Mac against an scp'd `finance.duckdb`, scp the rebuilt DB back. Acceptable for now since Paperless-driven incremental ingest is the steady state; rebuild is a parser-bug-fix tool.
 
 ### Step 7 — Housekeeping
 - Add `/var/lib/finance-lake/` and `/var/lib/paperless/` to restic include list (blocked on `backups.nix`).
