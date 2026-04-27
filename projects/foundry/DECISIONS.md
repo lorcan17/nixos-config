@@ -4,6 +4,8 @@
 
 | ID | Date | Decision |
 |---|---|---|
+| ADR-007 | 2026-04-26 | `dbt-duckdb` 1.10.1 packaged inline in `finance-lake/flake.nix`; avoid `python.override` to keep binary cache valid |
+| ADR-006 | 2026-04-25 | Drop-and-recreate bronze on every rebuild rather than migrate in place |
 | ADR-005 | 2026-04-23 | Rule-based pre-pass + description normalisation before embedding; salvages `personal-finance-lakehouse` rule corpus |
 | ADR-004 | 2026-04-23 | DuckDB `vss` viable; enable HNSW persistence via `hnsw_enable_experimental_persistence` |
 | ADR-003 | 2026-04-23 | Dev loop runs on Mac first; NixOS wiring only after Mac-side pipeline is green |
@@ -125,20 +127,20 @@ Thresholds widened from `≤0.15 / ≥0.30` to `≤0.22 / ≥0.35` to reflect te
 
 ---
 
-## ADR-007 — `dbt-duckdb` packaging path (deferred)
+## ADR-007 — `dbt-duckdb` packaged inline in finance-lake's flake
 
-**Date:** 2026-04-25
-**Status:** Open
+**Date:** 2026-04-25 (opened) / 2026-04-26 (resolved)
+**Status:** Accepted
 
-**Context.** Step 5c brings `finance-lake.packages.${system}.default` (which embeds `dbt-duckdb` in `pythonEnv`) into optiplex's NixOS configuration via `foundry.nix`. Pinned nixpkgs lacks `python312Packages.dbt-duckdb`, so `nix eval .#nixosConfigurations.optiplex` fails. While unresolved, `foundry.nix` is parked in `modules/wip/` to keep the rest of optiplex buildable.
+**Context.** Step 5c brings `finance-lake.packages.${system}.default` (which embeds `dbt-duckdb` in `pythonEnv`) into optiplex's NixOS configuration via `foundry.nix`. Pinned nixpkgs lacks `python312Packages.dbt-duckdb`, so `nix eval .#nixosConfigurations.optiplex` was failing.
 
-**Options.**
-- **(a) Overlay-side derivation.** Write a tiny `dbt-duckdb` package in `modules/shared/overlays/` using `buildPythonPackage` against the upstream PyPI tarball. Most isolated, ~30 lines.
-- **(b) Bump nixpkgs.** Update flake input — may pull other unrelated changes; risk of churn elsewhere.
-- **(c) Community overlay (`dbt-utils`/etc).** Survey existing third-party flakes before reinventing.
+**Survey.** No reusable community overlay exists. Upstream nixpkgs PR [#457151](https://github.com/NixOS/nixpkgs/pull/457151) (init at 1.9.6) has been open and stale for ~3 months. The four runtime deps (`dbt-core`, `dbt-adapters`, `dbt-common`, `duckdb`) are already in our pinned nixpkgs.
 
-**Decision (deferred).** Pick after a survey pass. (a) is the safe default if the survey turns up nothing.
+**Decision.** Define `dbt-duckdb` 1.10.1 inline in `finance-lake/flake.nix` as a `buildPythonPackage` derivation (within `perSystem`), and add it to `pythonEnv` directly via `withPackages`. Avoid `python312.override { packageOverrides }` — that would invalidate the binary cache for the entire python312 set and force every dep (polars, pandas, dbt-core, …) to rebuild from source.
+
+**Why finance-lake, not nix-config.** `finance-lake.packages.${system}.default` is built inside finance-lake's flake using its own `pkgs`. An overlay in nix-config doesn't reach that build. The dependency is finance-lake's, so it owns the derivation.
 
 **Consequences.**
-- `foundry.nix` cannot land on optiplex until this is closed.
-- Mac dev loop unaffected — Mac uses `uv` directly.
+- `foundry.nix` lives in `modules/optiplex/`; optiplex eval succeeds.
+- Drop the inline derivation once nixpkgs PR #457151 lands and we bump the input.
+- Hash pinned to source tarball at tag `1.10.1` — version bumps require updating both `version` and `hash`.

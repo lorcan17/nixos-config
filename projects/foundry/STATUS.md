@@ -105,8 +105,8 @@ finance-lake/
 - [x] `paperless.nix` — post-consume hook wired (`PAPERLESS_POST_CONSUME_SCRIPT = /etc/paperless/post-consume.sh`); `PAPERLESS_FILENAME_FORMAT` updated to `{custom_fields[owner]:-_unowned}/{correspondent}/{custom_fields[last4]:-_nolast4}/{created} {title}` matching `archive.py`. _(2026-04-25)_
 - [x] `foundry.nix` post-consume script env updated: `PAPERLESS_URL`, `PAPERLESS_API_TOKEN` (agenix), `FINANCE_DUCKDB`, `DIM_HOLDERS_CSV`. Seed-copy step adds `dim_holders.csv`. _(2026-04-25)_
 - [x] `paperless-api-token.age` agenix secret declared, owner=paperless. _(2026-04-25)_
-- [ ] **BLOCKER — `dbt-duckdb` missing from pinned nixpkgs `python312Packages`** (see ADR-007). `nix eval .#nixosConfigurations.optiplex...` fails. `foundry.nix` parked back in `modules/wip/` so optiplex rebuilds still succeed. Resolution options: (a) overlay `python312Packages.dbt-duckdb` with a manual derivation; (b) update nixpkgs flake input; (c) fetch from a community overlay. Until resolved, finance-lake's flake output cannot be referenced from a NixOS module.
-- [ ] First `nixos-rebuild switch` on optiplex once dbt-duckdb resolved + `foundry.nix` moved back to `optiplex/`. Expect Paperless to migrate-create on first run.
+- [x] **`dbt-duckdb` 1.10.1 packaged inline in `finance-lake/flake.nix`** _(2026-04-26 — ADR-007 resolved)_. finance-lake bumped to `b5d17ad`; nix-config flake.lock updated; `foundry.nix` moved back to `modules/optiplex/`; `nix eval .#nixosConfigurations.optiplex` clean.
+- [ ] First `nixos-rebuild switch` on optiplex. Expect Paperless to migrate-create on first run.
 - [ ] Update `.claude/CLAUDE.md` with: Paperless section, Foundry pipeline diagram, post-consume hook reference.
 
 #### 5d — Paperless first-run setup
