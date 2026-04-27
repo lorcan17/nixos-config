@@ -4,6 +4,7 @@
 
 | ID | Date | Decision |
 |---|---|---|
+| ADR-008 | 2026-04-26 | Migrate Python services from `buildPythonPackage` to `uv run --frozen` in systemd; Nix only for system layer |
 | ADR-007 | 2026-04-26 | `dbt-duckdb` 1.10.1 packaged inline in `finance-lake/flake.nix`; avoid `python.override` to keep binary cache valid |
 | ADR-006 | 2026-04-25 | Drop-and-recreate bronze on every rebuild rather than migrate in place |
 | ADR-005 | 2026-04-23 | Rule-based pre-pass + description normalisation before embedding; salvages `personal-finance-lakehouse` rule corpus |
@@ -144,3 +145,35 @@ Thresholds widened from `≤0.15 / ≥0.30` to `≤0.22 / ≥0.35` to reflect te
 - `foundry.nix` lives in `modules/optiplex/`; optiplex eval succeeds.
 - Drop the inline derivation once nixpkgs PR #457151 lands and we bump the input.
 - Hash pinned to source tarball at tag `1.10.1` — version bumps require updating both `version` and `hash`.
+
+---
+
+## ADR-008 — Python services use `uv run --frozen` in systemd, not `buildPythonPackage`
+
+**Date:** 2026-04-26
+**Status:** Accepted (spike landed in `modules/wip/foundry-uv.nix`; full migration deferred until smoke test passes)
+
+**Context.** Step 5c required `finance-lake.packages.${system}.default` to build on optiplex. Getting there cost a multi-hour grind:
+- `dbt-duckdb` missing from nixpkgs entirely (ADR-007 inline derivation).
+- Spurious namespace collision between `dbt-core` and `dbt-adapters` (`dbt/include/__init__.py`) requiring `python.buildEnv` with `ignoreCollisions = true`.
+- `statement-extract` initially shipped as `buildPythonApplication`, hiding its modules from consumer envs — switched to `buildPythonPackage`.
+- Cache misses on transitive scientific Python deps (polars rust compile, ndindex/blosc2 pytest suites at 20+ min each) on both aarch64-darwin and x86_64-linux. None of these packages are used directly by Foundry.
+
+All of this is *Nix Python packaging* friction. None of it is *Nix system tool* friction. NixOS-the-system (services, agenix, systemd, caddy) was flawless throughout.
+
+**Decision.** Going forward, Python services in this repo are deployed via:
+- `pkgs.uv` from nixpkgs (small, well-cached).
+- Source tree from a flake input.
+- `ExecStart = "${pkgs.uv}/bin/uv run --frozen python -m <mod>"`.
+- Venv + uv cache under a systemd `StateDirectory` so they survive rebuilds and only re-sync when `uv.lock` changes.
+
+`uv.lock` provides sufficient determinism for single-author homelab use; PyPI wheels are seconds, not minutes; uv is already the Mac dev tool, removing a dev/prod tooling gap.
+
+**Inter-repo dep handling (chosen path).** Drop the editable `path = "../statement-extract"` in `finance-lake/pyproject.toml`; replace with a pinned git source. Cost: a commit/push/`uv lock` cycle on every cross-repo change. Accepted as the price for a uniform build path on Mac and prod.
+
+**Consequences.**
+- New Python services: scaffold with `uv init` + `uv.lock` from the start; never write a Nix derivation.
+- Existing services using `buildPythonPackage` (foundry's three units, finance.nix's questrade-extract + finance-digest): leave alone unless touching them; opportunistic migration when next change is needed.
+- Generalises beyond Foundry — applies to all future personal Python projects.
+- ADR-007's inline `dbt-duckdb` derivation goes away entirely once foundry migrates to uv (deps come from PyPI).
+- `nixos-rebuild switch` on optiplex becomes seconds (no Python compile), restoring fast iteration.

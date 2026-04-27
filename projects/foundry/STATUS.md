@@ -112,17 +112,12 @@ finance-lake/
 - [x] **embed-enrich tolerates empty bronze** _(2026-04-26 — finance-lake `6a79ee7`)_. Short-circuits when `bronze.{bank,cc}_transactions` don't exist yet on a fresh deploy.
 - [ ] Update `.claude/CLAUDE.md` with: Paperless section, Foundry pipeline diagram, post-consume hook reference.
 
-#### 5d — Paperless first-run setup
-- [x] Custom fields `owner` + `last4` created (manual UI step done by user).
-- [x] API token minted, saved as `secrets/paperless-api-token.age`.
-- [ ] Add Uptime Kuma HTTP monitor for `paperless.${domain}` (deferred — UI step).
-
 #### 5d — Paperless first-run setup (manual, UI-only)
+- [x] Custom fields `owner` + `last4` created.
+- [x] API token minted, saved as `secrets/paperless-api-token.age`.
 - [ ] Set admin password via UI; capture in agenix as `paperless-admin-password.age` (or skip — single-user instance).
-- [ ] Create custom fields: `owner` (text), `last4` (text). One-time, can't be declarative.
-- [ ] Mint API token (Profile → Edit Profile → API Token). Save as agenix secret `paperless-api-token.age`. Reference in `foundry.nix` env for the post-consume script.
-- [ ] No correspondent matching rules — leave empty. Hook is the source of truth.
-- [ ] Import Uptime Kuma HTTP monitor for `paperless.${domain}`.
+- [ ] No correspondent matching rules — leave empty; hook is the source of truth.
+- [ ] Add Uptime Kuma HTTP monitor for `paperless.${domain}`.
 
 #### 5e — End-to-end smoke test
 - [ ] Drop one BMO chequing statement PDF (any filename, any owner) into `/var/lib/paperless/consume/`.
@@ -132,6 +127,13 @@ finance-lake/
 - [ ] Wait for `embed-enrich.timer` tick. Confirm: dim_merchants populated, review_queue updated.
 - [ ] Wait for `finance-dbt.timer` tick. Confirm: gold tables refresh.
 - [ ] Trigger an OpenAI-credits-out scenario manually (revoke key briefly): confirm ntfy fires; on key restore, next tick auto-resumes.
+
+### Migrate Python packaging to uv-in-systemd
+After today's grind through dbt-duckdb derivations, namespace collisions, and rust source-builds for transitive deps (polars, blosc2, ndindex), the conclusion: Nix is right for the system, wrong for the Python env. Plan:
+- Keep `foundry.nix` (paperless service, secrets, systemd units, caddy) on Nix.
+- Replace `finance-lake.packages.${system}.default` with a `uv run --frozen` ExecStart pattern. `finance-lake` already has `pyproject.toml` + `uv.lock`; nix-config just needs `pkgs.uv` and the repo source.
+- Same for `statement-extract`, `questrade-extract`, `finance-digest`.
+- Spike one service first (`embed-enrich`) alongside the current path; compare; migrate the rest if it sticks.
 
 ### Upstream contribution — nixpkgs `dbt-duckdb`
 PR [#457151](https://github.com/NixOS/nixpkgs/pull/457151) is stale (~3 months) and pins 1.9.6. Our inline derivation is at 1.10.1 with all deps verified working. Options to help land it:
