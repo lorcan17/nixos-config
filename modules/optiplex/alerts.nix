@@ -4,7 +4,10 @@
   # an urgent ntfy push to the `alerts` topic with the failed unit name.
   #
   # Add to a service:
-  #   systemd.services.<name>.serviceConfig.OnFailure = "ntfy-alert@%n.service";
+  #   systemd.services.<name>.unitConfig.OnFailure = "ntfy-alert@%n.service";
+  #
+  # NOTE: must be unitConfig (not serviceConfig). systemd's OnFailure lives in
+  # the [Unit] section; under [Service] it's silently ignored.
   systemd.services."ntfy-alert@" = {
     description = "ntfy alert for failed unit %i";
     serviceConfig = {

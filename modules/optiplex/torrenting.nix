@@ -81,9 +81,9 @@ in {
   systemd.services.transmission = {
     after    = [ "wg-mullvad.service" ];
     requires = [ "wg-mullvad.service" ];
+    unitConfig.OnFailure = "ntfy-alert@%n.service";
     serviceConfig = {
       NetworkNamespacePath = "/var/run/netns/${ns}";
-      OnFailure            = "ntfy-alert@%n.service";
     };
   };
 }

@@ -37,10 +37,10 @@ in {
 
     path = with pkgs; [ iproute2 wireguard-tools ];
 
+    unitConfig.OnFailure = "ntfy-alert@%n.service";
     serviceConfig = {
       Type            = "oneshot";
       RemainAfterExit = true;
-      OnFailure       = "ntfy-alert@%n.service";
     };
 
     script = ''

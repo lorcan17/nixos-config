@@ -15,10 +15,10 @@ in {
     description = "Questrade daily snapshot extract";
     after       = [ "network-online.target" "tailscaled.service" ];
     wants       = [ "network-online.target" ];
+    unitConfig.OnFailure = "ntfy-alert@%n.service";
     serviceConfig = {
       Type           = "oneshot";
       User           = "lorcan";
-      OnFailure      = "ntfy-alert@%n.service";
       ExecStart      = "${extractEnv}/bin/python3 -m questrade_extract.runner";
       ExecStartPost  = "${pkgs.curl}/bin/curl -fsS 'https://kuma.blue-apricots.com/api/push/RZBVNAMPW1ZXKA8cy5JRay3EIvhZkpAq?status=up&msg=OK&ping='";
       StateDirectory = "questrade-extract";
@@ -46,10 +46,10 @@ in {
   systemd.services.finance-digest = {
     description = "Daily portfolio digest via Claude + ntfy";
     after       = [ "questrade-extract.service" ];
+    unitConfig.OnFailure = "ntfy-alert@%n.service";
     serviceConfig = {
       Type      = "oneshot";
       User      = "lorcan";
-      OnFailure = "ntfy-alert@%n.service";
       ExecStart = pkgs.writeShellScript "finance-digest-run" ''
         export NTFY_URL="https://ntfy.${domain}/finance"
         export PYTHONPATH="${finance-digest}/src"
