@@ -120,8 +120,9 @@ finance-lake/
 - [ ] Add Uptime Kuma HTTP monitor for `paperless.${domain}`.
 
 #### 5e — End-to-end smoke test
-- [ ] Drop one BMO chequing statement PDF (any filename, any owner) into `/var/lib/paperless/consume/`.
-- [ ] Confirm: file disappears from consume/ within ~30s; appears at `originals/lorcan/bmo_deposit_account/<last4>/...`; bronze row landed; validation_issues empty.
+- [x] **First PDF lands in bronze** _(2026-04-26)_. BMO Everyday September 2025 → 1 bank_statement + 9 bank_transactions; holder=LORCAN TRAVERS, account=09863960-921, period 2025-08-06→2025-09-05, validation_issues=0. Required fixes: PYTHONPATH unset (paperless 3.13 leak), UMask=0007 + tmpfiles `Z` (paperless group write to duckdb), lazy `ensure_bronze_schema(con)` in `ingest_pdf` (was only in scripts/). Five rebuilds and three commits to land it.
+- [ ] **owner resolution + correspondent + filename format**: hook sets last4 + title correctly; owner falls to `_unowned` (now fixed — copied dim_holders.csv to /var/lib/finance-lake/seeds/), correspondent stays null (hook doesn't set it), filename format uses bash `:-default` syntax that Paperless interprets literally. Three follow-ups for next session.
+- [ ] Drop the *second* PDF and verify owner=lorcan, correspondent=BMO, file path resolves.
 - [ ] Drop one Amex joint statement (Lorcan + Grace primary/supplementary). Confirm: lands at `originals/joint/amex/...`, both holder names captured.
 - [ ] Drop a non-finance PDF (e.g. utility bill). Confirm: hook is no-op (exits 0), Paperless leaves it under `_unowned/` per filename format.
 - [ ] Wait for `embed-enrich.timer` tick. Confirm: dim_merchants populated, review_queue updated.
