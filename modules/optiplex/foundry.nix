@@ -50,10 +50,10 @@ in {
     description = "Foundry — enrich bronze rows (merchant + category)";
     after       = [ "network-online.target" ];
     wants       = [ "network-online.target" ];
+    unitConfig.OnFailure = "ntfy-alert@%n.service";
     serviceConfig = {
       Type      = "oneshot";
       User      = "lorcan";
-      OnFailure = "ntfy-alert@%n.service";
       ExecStart = pkgs.writeShellScript "embed-enrich-run" ''
         export OPENAI_API_KEY="$(cat ${config.age.secrets.openai-api-key.path})"
         export FINANCE_DUCKDB="/var/lib/finance-lake/finance.duckdb"
@@ -80,10 +80,10 @@ in {
   systemd.services.finance-dbt = {
     description = "Foundry — dbt seed + incremental run";
     after       = [ "embed-enrich.service" ];
+    unitConfig.OnFailure = "ntfy-alert@%n.service";
     serviceConfig = {
       Type      = "oneshot";
       User      = "lorcan";
-      OnFailure = "ntfy-alert@%n.service";
       ExecStartPre = pkgs.writeShellScript "finance-dbt-pre" ''
         # Seeds that are gitignored (PII / personal taxonomy) live outside the
         # Nix store. Copy them into the dbt project tree before each run.
