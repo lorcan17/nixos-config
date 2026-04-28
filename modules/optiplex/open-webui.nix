@@ -59,9 +59,13 @@
       RemainAfterExit = true;
       # Use the Nix Python3 pip directly — uv tries to download its own Python
       # which fails on NixOS (non-standard dynamic linker).
+      # --no-deps: claude-agent-sdk's deps (pydantic, httpx, anyio, etc.) are
+      # already in OpenWebUI's Nix Python env. Installing them again shadows
+      # the Nix versions and breaks pydantic-core C extension imports.
       ExecStart = "+${pkgs.writeShellScript "owui-pip-deps" ''
         ${pkgs.python3Packages.pip}/bin/pip install \
           --target /var/lib/open-webui/python-packages \
+          --no-deps \
           'claude-agent-sdk>=0.1.60'
         chmod -R a+rX /var/lib/open-webui/python-packages
       ''}";
