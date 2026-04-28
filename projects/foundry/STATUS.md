@@ -143,10 +143,14 @@ PR [#457151](https://github.com/NixOS/nixpkgs/pull/457151) is stale (~3 months) 
 - Once merged, drop our inline derivation and bump `nixpkgs` input.
 
 ### Step 6 — OpenWebUI tools (OptiPlex-only)
-`finance_sql` + `finance_chart` provisioned via oneshot after rebuild. Grant `open-webui` read on `finance.duckdb`.
-- `finance_sql(query)` — runs read-only SQL against `/var/lib/finance-lake/finance.duckdb`, returns rows.
-- `finance_describe()` — returns silver/gold schema hints to prime the model.
-- Tool docstrings carry schema cheat-sheet (column names, units, grain) — accuracy depends on these. Pair with Claude Sonnet 4.6 via the OpenWebUI Anthropic connector; smaller local Ollama models miss the joins.
+`finance_sql` + `finance_describe` written (in `finance-lake/openwebui_tools/finance_tools.py`). Not yet wired to DuckDB read access. Pair with Claude Sonnet 4.6 via OpenRouter connection (Admin → Settings → Connections → `https://openrouter.ai/api/v1`). Still TODO in UI:
+- Add OpenRouter connection with `OPENROUTER_API_KEY` (set in env)
+- Install `finance_tools.py` via OpenWebUI Admin → Functions
+- Install inline-visualizer-v2 (https://github.com/Classic298/open-webui-plugins/tree/main/inline-visualizer-v2) for chart rendering
+
+**claude-code pipe blocked — Python packaging wall.** `tfriedel/openwebui-claude-code` requires `claude_agent_sdk`, which requires `mcp`, which requires `pydantic`. OpenWebUI's Nix Python env already has pydantic; installing again via pip shadows it and breaks pydantic-core C extensions (ImportError on `.so` map). `--no-deps` avoids the clash but then `mcp` is missing and the SDK's `__init__.py` fails to import. Two clean paths forward:
+1. **Bump nixpkgs to get OpenWebUI 0.9.1** — adds native Anthropic connector; no pipe needed for Claude models. Blocked until `caddy-src-with-plugins` hash mismatch is fixed upstream (track NixOS/nixpkgs Caddy bump).
+2. **Migrate open-webui to OCI container** — Docker image ships its own Python env; no Nix/pip conflict. `virtualisation.oci-containers` + named volume for `/app/backend/data`. Tradeoff: loses declarative Nix module API (`services.open-webui.*`), adds container runtime overhead. Viable given open-webui is already stateful.
 
 ### Dashboard UI — Evidence
 Pick Evidence (`evidence.dev`) over Metabase/Superset: markdown + SQL → static dashboard, native DuckDB support, single binary. Plan:
