@@ -41,10 +41,10 @@
 
   systemd.tmpfiles.rules = [
     # Writable site-packages for pip-installed OpenWebUI function deps.
-    "d /var/lib/open-webui/python-packages 0755 open-webui open-webui -"
+    "d /var/lib/open-webui/python-packages 0755 root root -"
     # Prune claude-agent-pipe workdirs older than 7 days.
-    "d /tmp/claude-agent-pipe 0755 open-webui open-webui -"
-    "e /tmp/claude-agent-pipe 0755 open-webui open-webui 7d"
+    "d /tmp/claude-agent-pipe 0755 root root -"
+    "e /tmp/claude-agent-pipe 0755 root root 7d"
   ];
 
   # Install claude-agent-sdk into the writable PYTHONPATH dir.
@@ -56,11 +56,14 @@
     serviceConfig = {
       Type            = "oneshot";
       RemainAfterExit = true;
-      User            = "open-webui";
-      ExecStart       = "${pkgs.uv}/bin/uv pip install \
-        --target /var/lib/open-webui/python-packages \
-        --system \
-        'claude-agent-sdk>=0.1.60'";
+      # DynamicUser=true means open-webui isn't a real user — run as root.
+      ExecStart       = "+${pkgs.writeShellScript "owui-pip-deps" ''
+        ${pkgs.uv}/bin/uv pip install \
+          --target /var/lib/open-webui/python-packages \
+          --system \
+          'claude-agent-sdk>=0.1.60'
+        chmod -R a+rX /var/lib/open-webui/python-packages
+      ''}";
     };
   };
 
