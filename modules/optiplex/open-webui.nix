@@ -24,16 +24,17 @@
       ExecStart = "+${pkgs.writeShellScript "owui-env-prep" ''
         install -d -m 700 /run/open-webui-secrets
         {
-          printf 'ANTHROPIC_API_KEY=%s\n' "$(cat ${config.age.secrets.anthropic-api-key.path})"
-          printf 'OPENROUTER_API_KEY=%s\n' "$(cat ${config.age.secrets.open-router-api-key.path})"
+          printf 'ANTHROPIC_API_KEY=%s\n'        "$(cat ${config.age.secrets.anthropic-api-key.path})"
+          printf 'OPENROUTER_API_KEY=%s\n'       "$(cat ${config.age.secrets.open-router-api-key.path})"
+          printf 'CLAUDE_CODE_OAUTH_TOKEN=%s\n'  "$(cat ${config.age.secrets.claude-code-oauth-token.path})"
         } > /run/open-webui-secrets/env
         chmod 600 /run/open-webui-secrets/env
       ''}";
     };
   };
 
-  # Add duckdb to the service PATH so finance_tools.py can shell out to it.
-  systemd.services.open-webui.path = [ pkgs.duckdb ];
+  # duckdb for finance_tools.py; claude-code for the claude-code pipe.
+  systemd.services.open-webui.path = [ pkgs.duckdb pkgs.claude-code ];
 
   services.caddy.virtualHosts."chat.${domain}".extraConfig = ''
     import cloudflare_tls

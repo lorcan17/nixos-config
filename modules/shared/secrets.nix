@@ -32,6 +32,11 @@
       mode  = "0400";
       owner = "lorcan";
     };
+    claude-code-oauth-token = {
+      file  = ../../secrets/claude-code-oauth-token.age;
+      mode  = "0400";
+      owner = "lorcan";
+    };
     tailscale-authkey = {
       file = ../../secrets/tailscale-authkey.age;
       mode = "0400";
