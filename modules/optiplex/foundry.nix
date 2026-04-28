@@ -39,9 +39,10 @@ in {
   # the group, mode 0770. lorcan must be added to the paperless group
   # (declared below) for this to work in both directions.
   systemd.tmpfiles.rules = [
-    "d /var/lib/finance-lake          0770 lorcan paperless -"
-    "d /var/lib/finance-lake/seeds    0770 lorcan paperless -"
-    "d /var/lib/finance-lake/dbt      0770 lorcan paperless -"
+    "d /var/lib/finance-lake            0770 lorcan paperless -"
+    "d /var/lib/finance-lake/seeds      0770 lorcan paperless -"
+    "d /var/lib/finance-lake/dbt        0770 lorcan paperless -"
+    "d /var/lib/finance-lake/dbt/seeds  0770 lorcan paperless -"
     # finance.duckdb must be group-writable: created by lorcan (embed-enrich /
     # dbt), then mutated by paperless (the post-consume ingest hook).
     # `Z` recursively normalises mode + ownership on existing files too, so a
