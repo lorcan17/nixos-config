@@ -106,6 +106,14 @@ in {
               /var/lib/finance-lake/dbt/seeds/$f
           fi
         done
+        # Bootstrap seeds that have no PII from their committed example files.
+        # dim_category_overrides is only copied if absent — it accumulates manual overrides.
+        for f in dim_transfer_rules dim_category_overrides; do
+          dest=/var/lib/finance-lake/dbt/seeds/$f.csv
+          if [ ! -f $dest ]; then
+            install -m 0640 ${lakePkg}/share/finance-lake/seeds/$f.example.csv $dest
+          fi
+        done
       '';
       ExecStart = pkgs.writeShellScript "finance-dbt-run" ''
         export FINANCE_DUCKDB="/var/lib/finance-lake/finance.duckdb"
