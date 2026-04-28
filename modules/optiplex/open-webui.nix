@@ -8,7 +8,7 @@
       # Disable auth — Tailscale is the perimeter
       WEBUI_AUTH = "False";
     };
-    environmentFiles = [ "/run/open-webui-secrets/env" ];
+    environmentFile = "/run/open-webui-secrets/env";
   };
 
   # Write a KEY=value env file at service start from the agenix-decrypted secret.
