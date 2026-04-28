@@ -25,9 +25,10 @@
       RemainAfterExit = true;
       ExecStart = "+${pkgs.writeShellScript "owui-env-prep" ''
         install -d -m 700 /run/open-webui-secrets
-        printf 'ANTHROPIC_API_KEY=%s\n' \
-          "$(cat ${config.age.secrets.anthropic-api-key.path})" \
-          > /run/open-webui-secrets/env
+        {
+          printf 'ANTHROPIC_API_KEY=%s\n' "$(cat ${config.age.secrets.anthropic-api-key.path})"
+          printf 'OPENROUTER_API_KEY=%s\n' "$(cat ${config.age.secrets.open-router-api-key.path})"
+        } > /run/open-webui-secrets/env
         chmod 600 /run/open-webui-secrets/env
       ''}";
     };
