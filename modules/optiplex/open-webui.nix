@@ -36,6 +36,12 @@
   # duckdb for finance_tools.py; claude-code for the claude-code pipe.
   systemd.services.open-webui.path = [ pkgs.duckdb pkgs.claude-code ];
 
+  # Prune claude-agent-pipe workdirs older than 7 days — never cleaned by the pipe itself.
+  systemd.tmpfiles.rules = [
+    "d /tmp/claude-agent-pipe 0755 open-webui open-webui -"
+    "e /tmp/claude-agent-pipe 0755 open-webui open-webui 7d"
+  ];
+
   services.caddy.virtualHosts."chat.${domain}".extraConfig = ''
     import cloudflare_tls
     reverse_proxy localhost:8080
