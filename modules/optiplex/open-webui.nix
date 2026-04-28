@@ -57,11 +57,11 @@
     serviceConfig = {
       Type            = "oneshot";
       RemainAfterExit = true;
-      # DynamicUser=true means open-webui isn't a real user — run as root.
-      ExecStart       = "+${pkgs.writeShellScript "owui-pip-deps" ''
-        ${pkgs.uv}/bin/uv pip install \
+      # Use the Nix Python3 pip directly — uv tries to download its own Python
+      # which fails on NixOS (non-standard dynamic linker).
+      ExecStart = "+${pkgs.writeShellScript "owui-pip-deps" ''
+        ${pkgs.python3Packages.pip}/bin/pip install \
           --target /var/lib/open-webui/python-packages \
-          --system \
           'claude-agent-sdk>=0.1.60'
         chmod -R a+rX /var/lib/open-webui/python-packages
       ''}";
