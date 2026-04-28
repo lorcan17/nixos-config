@@ -19,9 +19,8 @@
     };
     anthropic-api-key = {
       file  = ../../secrets/anthropic-api-key.age;
-      mode  = "0440";
+      mode  = "0400";
       owner = "lorcan";
-      group = "open-webui";
     };
     open-router-api-key = {
       file  = ../../secrets/open-router-api-key.age;

@@ -8,22 +8,29 @@
       # Disable auth — Tailscale is the perimeter
       WEBUI_AUTH = "False";
     };
+    # Loaded after open-webui-env-prep.service writes it.
     environmentFile = "/run/open-webui-secrets/env";
   };
 
-  # Write a KEY=value env file at service start from the agenix-decrypted secret.
-  # Runs as root (+) so it can read the 0440 secret and write to /run.
-  systemd.services.open-webui.serviceConfig.ExecStartPre =
-    let
-      secretPath = config.age.secrets.anthropic-api-key.path;
-    in
-    "+${pkgs.writeShellScript "open-webui-write-env" ''
-      install -d -m 750 -o open-webui -g open-webui /run/open-webui-secrets
-      printf 'ANTHROPIC_API_KEY=%s\n' "$(cat ${secretPath})" \
-        > /run/open-webui-secrets/env
-      chmod 640 /run/open-webui-secrets/env
-      chown open-webui:open-webui /run/open-webui-secrets/env
-    ''}";
+  # Separate oneshot that runs as root before open-webui starts.
+  # systemd loads EnvironmentFile before ExecStartPre, so we can't use ExecStartPre
+  # to create the file — it must exist before the service unit even starts.
+  systemd.services.open-webui-env-prep = {
+    description = "Write open-webui API key env file";
+    before      = [ "open-webui.service" ];
+    requiredBy  = [ "open-webui.service" ];
+    serviceConfig = {
+      Type            = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "+${pkgs.writeShellScript "owui-env-prep" ''
+        install -d -m 700 /run/open-webui-secrets
+        printf 'ANTHROPIC_API_KEY=%s\n' \
+          "$(cat ${config.age.secrets.anthropic-api-key.path})" \
+          > /run/open-webui-secrets/env
+        chmod 600 /run/open-webui-secrets/env
+      ''}";
+    };
+  };
 
   services.caddy.virtualHosts."chat.${domain}".extraConfig = ''
     import cloudflare_tls

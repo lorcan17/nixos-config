@@ -30,7 +30,7 @@
       # Layout matches statement-extract's archive.py:
       #   originals/<owner>/<correspondent>/<last4>/<created> <title>.pdf
       # Non-finance docs fall back to _unowned / _nolast4 buckets.
-      PAPERLESS_FILENAME_FORMAT  = "{custom_fields[owner]:-_unowned}/{correspondent}/{custom_fields[last4]:-_nolast4}/{created} {title}";
+      PAPERLESS_FILENAME_FORMAT  = "{custom_fields[owner]:-_unowned}/{{ correspondent }}/{custom_fields[last4]:-_nolast4}/{{ created }} {{ title }}";
       PAPERLESS_FILENAME_FORMAT_REMOVE_NONE = true;
 
       # Hook script written to /etc by foundry.nix.
