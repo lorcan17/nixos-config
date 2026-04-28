@@ -6,9 +6,10 @@
     environment = {
       OLLAMA_BASE_URL = "http://localhost:11434";
       WEBUI_AUTH      = "False";
-      # Writable site-packages for pip-installed function deps (e.g. claude-agent-sdk).
-      # The Nix store is read-only so pip install must target a stateful directory.
-      PYTHONPATH      = "/var/lib/open-webui/python-packages";
+      # Redirect pip installs to a writable directory — Nix store is read-only.
+      # PIP_TARGET makes `pip install` write there; PYTHONPATH makes it importable.
+      PIP_TARGET  = "/var/lib/open-webui/python-packages";
+      PYTHONPATH  = "/var/lib/open-webui/python-packages";
     };
     # Loaded after open-webui-env-prep.service writes it.
     environmentFile = "/run/open-webui-secrets/env";
