@@ -1,6 +1,6 @@
 # Foundry — Status
 
-> Kanban for Project Foundry (personal finance data lake). See [SPEC.md](./SPEC.md) for architecture, [DECISIONS.md](./DECISIONS.md) for ADRs. Last updated: 2026-04-24.
+> Kanban for Project Foundry (personal finance data lake). See [SPEC.md](./SPEC.md) for architecture, [DECISIONS.md](./DECISIONS.md) for ADRs. Last updated: 2026-04-28.
 
 ## In Flight
 
@@ -165,7 +165,17 @@ Pick Evidence (`evidence.dev`) over Metabase/Superset: markdown + SQL → static
 - Update root `PROJECT_STATUS.md` when Foundry lands.
 
 ### Transfer-matching (finance-lake / dbt)
-Inter-account transfers (e.g. BMO chequing → EQ savings) currently inflate `gold.spending_by_category`. Add a silver concern that pairs opposite-sign, same-amount transactions across accounts within ±N days, exposed either as `dim_transfers` or a `fact_transactions.is_transfer` flag. Then filter `where not is_transfer` in `gold/spending_by_category.sql` (TODO already noted at line 3). Defer until ≥3 months of prod data exist to tune the matching window empirically.
+_(2026-04-28 — substantially complete)_ `fact_transfers` now covers pair-matched transfers + one-way outbound transfers via `dim_transfer_rules` seed (Wise, CRA, CIBC, WealthSimple, Questrade). Transfer review queue reduced from 578 → 14 rows at $5k+ uncategorised threshold.
+
+Remaining: tune matching window empirically once ≥3 months of prod data exist. Inter-account same-day reversals (e.g. `Payment cancelled`) still in the queue — require manual override via `dim_category_overrides`.
+
+Also landed (2026-04-28):
+- `stable_id` on `fact_transactions` — rebuild-stable key for overrides
+- `dim_category_overrides` seed — manual category assignments, keyed on `stable_id`
+- Income rules: lululemon salary, lux insights, CRA refund, Questrade dividends
+- Rent rule: `cheque no` pattern
+- `bonus` category (child of income) — assign manually via overrides CSV
+- `foundry.nix` bootstraps both new seeds from `.example.csv` on first run
 
 ### statement-extract — coast_capital_chequing returns empty accounts on some PDFs
 `joint/coast_capital_chequing/October 2024 - Monthly eStatement.pdf` parses without raising but produces a `MultiAccountDepositStatement` with `accounts=[]`. `ingest.core` now treats this as not-a-finance-doc and tags `multi_account_no_accounts` in `validation_issues`, so the rebuild doesn't fail — but the parser should be fixed. Likely a layout edge case in the October 2024 statement (page-break or section anchor change).
