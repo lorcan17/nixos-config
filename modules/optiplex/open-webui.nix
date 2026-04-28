@@ -6,8 +6,10 @@
     environment = {
       OLLAMA_BASE_URL = "http://localhost:11434";
       WEBUI_AUTH      = "False";
-      # Redirect pip installs to a writable directory — Nix store is read-only.
+      # Redirect pip installs to a writable directory inside StateDirectory.
       # PIP_TARGET makes `pip install` write there; PYTHONPATH makes it importable.
+      # Both ExecStartPre and the app process share the same filesystem namespace
+      # (StateDirectory), so this path is consistent across both.
       PIP_TARGET  = "/var/lib/open-webui/python-packages";
       PYTHONPATH  = "/var/lib/open-webui/python-packages";
     };
@@ -41,36 +43,25 @@
   systemd.services.open-webui.path = [ pkgs.duckdb pkgs.claude-code ];
 
   systemd.tmpfiles.rules = [
-    # Writable site-packages for pip-installed OpenWebUI function deps.
-    "d /var/lib/open-webui/python-packages 0777 root root -"
     # Prune claude-agent-pipe workdirs older than 7 days.
     "d /tmp/claude-agent-pipe 0755 root root -"
     "e /tmp/claude-agent-pipe 0755 root root 7d"
   ];
 
-  # Install claude-agent-sdk into the writable PYTHONPATH dir.
-  # Runs once; skips reinstall if already present at the right version.
-  systemd.services.open-webui-python-deps = {
-    description = "Install Python deps for OpenWebUI functions";
-    before      = [ "open-webui.service" ];
-    requiredBy  = [ "open-webui.service" ];
-    serviceConfig = {
-      Type            = "oneshot";
-      RemainAfterExit = true;
-      # Use the Nix Python3 pip directly — uv tries to download its own Python
-      # which fails on NixOS (non-standard dynamic linker).
-      # --no-deps: claude-agent-sdk's deps (pydantic, httpx, anyio, etc.) are
-      # already in OpenWebUI's Nix Python env. Installing them again shadows
-      # the Nix versions and breaks pydantic-core C extension imports.
-      ExecStart = "+${pkgs.writeShellScript "owui-pip-deps" ''
-        ${pkgs.python3Packages.pip}/bin/pip install \
-          --target /var/lib/open-webui/python-packages \
-          --no-deps \
-          'claude-agent-sdk>=0.1.60'
-        chmod -R a+rX /var/lib/open-webui/python-packages
-      ''}";
-    };
-  };
+  # Install claude-agent-sdk inside the service's own filesystem namespace.
+  # open-webui uses StateDirectory + PrivateTmp, so root-owned oneshots can't
+  # write into the path the service actually sees — must run as ExecStartPre
+  # under the service's own DynamicUser context.
+  # --no-deps: pydantic/httpx/anyio are already in OpenWebUI's Nix Python env;
+  # reinstalling them shadows the Nix versions and breaks pydantic-core C ext.
+  systemd.services.open-webui.serviceConfig.ExecStartPre =
+    "+${pkgs.writeShellScript "owui-pip-deps" ''
+      ${pkgs.python3Packages.pip}/bin/pip install \
+        --target /var/lib/open-webui/python-packages \
+        --no-deps \
+        --quiet \
+        'claude-agent-sdk>=0.1.60'
+    ''}";
 
   services.caddy.virtualHosts."chat.${domain}".extraConfig = ''
     import cloudflare_tls
