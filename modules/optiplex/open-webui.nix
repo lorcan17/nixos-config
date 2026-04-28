@@ -42,7 +42,7 @@
 
   systemd.tmpfiles.rules = [
     # Writable site-packages for pip-installed OpenWebUI function deps.
-    "d /var/lib/open-webui/python-packages 0755 root root -"
+    "d /var/lib/open-webui/python-packages 0777 root root -"
     # Prune claude-agent-pipe workdirs older than 7 days.
     "d /tmp/claude-agent-pipe 0755 root root -"
     "e /tmp/claude-agent-pipe 0755 root root 7d"
