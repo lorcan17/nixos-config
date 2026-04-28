@@ -5,8 +5,9 @@
     port   = 8080;
     environment = {
       OLLAMA_BASE_URL = "http://localhost:11434";
-      # Disable auth — Tailscale is the perimeter
-      WEBUI_AUTH = "False";
+      WEBUI_AUTH     = "False";
+      # duckdb on PATH so finance_tools.py can shell out to it
+      PATH = "${pkgs.duckdb}/bin:$PATH";
     };
     # Loaded after open-webui-env-prep.service writes it.
     environmentFile = "/run/open-webui-secrets/env";
