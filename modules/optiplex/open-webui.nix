@@ -1,4 +1,4 @@
-{ domain, config, pkgs, ... }: {
+{ domain, config, pkgs, lib, ... }: {
   services.open-webui = {
     enable = true;
     host   = "127.0.0.1";
@@ -6,8 +6,9 @@
     environment = {
       OLLAMA_BASE_URL = "http://localhost:11434";
       WEBUI_AUTH     = "False";
-      # duckdb on PATH so finance_tools.py can shell out to it
-      PATH = "${pkgs.duckdb}/bin:$PATH";
+      # duckdb on PATH so finance_tools.py can shell out to it.
+      # mkForce needed because the open-webui NixOS module also sets PATH.
+      PATH = lib.mkForce "${pkgs.duckdb}/bin:${pkgs.coreutils}/bin:${pkgs.findutils}/bin:${pkgs.gnugrep}/bin:${pkgs.gnused}/bin:${pkgs.systemd}/bin";
     };
     # Loaded after open-webui-env-prep.service writes it.
     environmentFile = "/run/open-webui-secrets/env";
