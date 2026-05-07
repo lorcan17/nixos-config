@@ -12,6 +12,8 @@
 
   services.caddy.virtualHosts."rss.${domain}".extraConfig = ''
     import cloudflare_tls
+    # FocusReader sends FreshRSS-style paths — rewrite to Miniflux equivalents
+    rewrite /v1/api/greader.php/* /{path}
     reverse_proxy localhost:8084
   '';
 }
