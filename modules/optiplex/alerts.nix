@@ -18,14 +18,14 @@
     serviceConfig = {
       Type = "oneshot";
       User = "lorcan";
-      ExecStart = pkgs.writeShellScript "ntfy-alert" ''
-        UNIT="%i"
+      # systemd's %i specifier only expands on the ExecStart= line itself,
+      # not inside files referenced from it. Pass the unit name as $1.
+      ExecStart = ''${pkgs.writeShellScript "ntfy-alert" ''
+        UNIT="$1"
 
-        # Capture exit code and last journal lines
         EXIT_CODE=$(${pkgs.systemd}/bin/systemctl show --property=ExecMainStatus --value "$UNIT" 2>/dev/null || echo "unknown")
         LAST_LINES=$(${pkgs.systemd}/bin/journalctl -u "$UNIT" -n 5 --no-pager 2>/dev/null | tail -3)
 
-        # Build message body with context
         BODY="❌ $UNIT failed on optiplex
 
         Exit code: $EXIT_CODE
@@ -39,7 +39,7 @@
           -H "Tags: warning,optiplex" \
           -d "$BODY" \
           "https://ntfy.${domain}/alerts"
-      '';
+      ''} %i'';
     };
   };
 }
