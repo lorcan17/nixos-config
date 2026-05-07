@@ -130,6 +130,8 @@ Tasks:
 - [x] **Miniflux** — running at `rss.{$DOMAIN}`; Greader API enabled; FocusReader compatible. _(2026-05-06)_
 - [ ] **FocusReader setup** — add account in FocusReader: type=FreshRSS/Miniflux, URL=`https://rss.blue-apricots.com`, generate API key in Miniflux Settings → API Keys.
 - [ ] **Article-to-audio trigger** — optional: poll Miniflux API for starred articles → extract full text → TTS → drop MP3 into podcasts dir. Reuses `audiobook.py` pipeline; OpenAI TTS `tts-1` as default.
+- [ ] **Stratechery subscription** — currently getting paywalled teasers only. Options: (1) pay $15/mo direct; (2) subscribe via email + Kill the Newsletter → full articles in Miniflux.
+- [ ] **Vancouver gigs feed** — rss.app pulls too much noise (soccer teams playing Vancouver etc.). Better approach: find a curated local events source or write a Miniflux scraper rule against a specific venue/events page.
 
 - [ ] **Gutenberg → audiobook pipeline** — `make-audiobook --gutenberg ID`; Kokoro TTS → `.m4b` with chapters + cover + metadata → Audiobookshelf. Module written; needs `nixos-rebuild switch` on optiplex then first test run.
 - [ ] **Article → audio briefing** — `make-audiobook --url URL`; same pipeline, outputs `.mp3` to podcasts dir. Module written + rebuild done. **Blocked on TTS speed** — ~25 min/chunk on Kokoro CPU; a 18-chunk article takes ~7.5h. Decision needed (see below).
