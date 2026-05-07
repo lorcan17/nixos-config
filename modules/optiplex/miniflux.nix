@@ -7,8 +7,6 @@
     config = {
       LISTEN_ADDR = "localhost:8084";
       BASE_URL    = "https://rss.${domain}";
-      # Greader API — required for FocusReader
-      OAUTH2_PROVIDER = "";
     };
   };
 
