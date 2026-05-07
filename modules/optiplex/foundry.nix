@@ -117,7 +117,10 @@ in {
       '';
       ExecStart = pkgs.writeShellScript "finance-dbt-run" ''
         export FINANCE_DUCKDB="/var/lib/finance-lake/finance.duckdb"
-        export DBT_PROFILES_DIR="/var/lib/finance-lake/dbt"
+        # profiles.yml is shipped in the package tree; select the prod
+        # output so dbt writes to /var/lib/finance-lake/finance.duckdb.
+        export DBT_PROFILES_DIR="${lakePkg}/share/finance-lake"
+        export DBT_TARGET="prod"
         # The dbt project tree lives in the (read-only) Nix store, so point
         # logs / target / packages at a writable state dir. Without this,
         # dbt exits 2 silently when it can't open its log file.
