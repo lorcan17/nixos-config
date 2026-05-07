@@ -32,6 +32,11 @@
       mode  = "0400";
       owner = "lorcan";
     };
+    miniflux-admin-credentials = {
+      file  = ../../secrets/miniflux-admin-credentials.age;
+      mode  = "0400";
+      # miniflux service uses DynamicUser — root reads the EnvironmentFile
+    };
     claude-code-oauth-token = {
       file  = ../../secrets/claude-code-oauth-token.age;
       mode  = "0400";

@@ -21,6 +21,7 @@ in {
   "open-router-api-key.age".publicKeys    = [ lorcan optiplex ];
   "openai-api-key.age".publicKeys         = [ lorcan optiplex ];
   "paperless-api-token.age".publicKeys      = [ lorcan optiplex ];
+  "miniflux-admin-credentials.age".publicKeys = [ lorcan optiplex ];
   "claude-code-oauth-token.age".publicKeys = [ lorcan optiplex ];
   # caddy-domain.age and domain.age retired — domain is now a Nix var in config.nix
 }

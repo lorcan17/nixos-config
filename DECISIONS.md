@@ -6,6 +6,63 @@
 
 ---
 
+## 2026-05-06 — Miniflux over FreshRSS for self-hosted RSS
+
+**Context:** FreshRSS was chosen initially as the self-hosted RSS backend for FocusReader. During the Mac dry-build it triggered a long source compile because the PHP derivation it requires is not cached in the `aarch64-darwin` binary cache.
+
+**Decision:** Use Miniflux (`services.miniflux`) instead of FreshRSS.
+
+**Rationale:**
+- Miniflux is a Go binary — it pulls from the nixpkgs binary cache instantly on both `aarch64-darwin` and `x86_64-linux`. No source compilation.
+- Both support the Greader API, which is what FocusReader connects to. No client-side difference.
+- FreshRSS's only unique capability — per-feed cookie auth for paywalled sites — is not needed for the planned feed list.
+- Miniflux's NixOS module (`services.miniflux`) handles PostgreSQL provisioning, migrations, and admin user creation declaratively via `createDatabaseLocally = true`.
+
+**Consequences:**
+- `modules/optiplex/miniflux.nix` replaces `modules/optiplex/freshrss.nix`.
+- `secrets/miniflux-admin-credentials.age` (env-file with `ADMIN_USERNAME` + `ADMIN_PASSWORD`) replaces `secrets/freshrss-password.age`.
+- Caddy reverse-proxies `localhost:8084`; no php-fpm pool needed.
+- PostgreSQL is provisioned automatically by the module.
+
+**Revisit if:** paywalled feed access via per-feed cookies becomes a requirement.
+
+---
+
+## 2026-05-06 — Service placement policy: NixOS-native vs OCI containers
+
+**Context:** Several fast-moving AI-layer services (Open-WebUI, Ollama models, future OpenClaw/Claude integrations) have caused repeated pain when managed as `services.*` NixOS modules: nixpkgs lags upstream by weeks–months, and nixpkgs version bumps can silently trigger multi-hour source rebuilds on x86. `open-webui.nix` accumulated six `fix(open-webui)` commits trying to paper over pip-inside-systemd hacks — a sign the abstraction was wrong. Additionally, imperative tools like the Claude CLI and Hermes model weights don't fit cleanly into any Nix packaging primitive.
+
+**Decision:** Split services into two tiers based on cadence and upstream packaging:
+
+| Tier | Stays as `services.*` | Moves to `virtualisation.oci-containers` |
+|---|---|---|
+| Slow infra | Caddy, Prometheus, Grafana, Tailscale, Netdata, ntfy, Uptime Kuma, Vaultwarden, Transmission, Ollama (daemon only) | — |
+| Media stack | Sonarr, Radarr, Prowlarr, Jellyfin, Audiobookshelf, Jellyseerr | — |
+| Fast-moving AI/app layer | — | Open-WebUI, future OpenClaw, any new AI tool with a Docker-first upstream |
+| CLI tools / models | Ollama models via oneshot `ollama pull` systemd service | Claude CLI via npm in shellInit; managed outside Nix |
+
+Rule of thumb: **if upstream's primary release artefact is a Docker image and the tool moves faster than a nixpkgs release cycle, use OCI**. If nixpkgs has a mature module that tracks upstream within a few weeks, use `services.*`.
+
+**Rationale:**
+- `virtualisation.oci-containers` is fully declarative — Nix manages container lifecycle, restart policy, env, and volumes. You get reproducibility without owning the build.
+- Pinning an exact image tag eliminates surprise source rebuilds. Rollback = change tag, rebuild.
+- The "prefer NixOS-native" default remains correct for infra (Caddy, Prometheus, etc.) — these move slowly and nixpkgs packaging is high quality. Applying it uniformly to AI-layer tools was the mistake.
+- Open-WebUI's pip-inside-systemd hacks (`PIP_TARGET`, `ExecStartPre` workarounds) are symptoms that `services.open-webui` was the wrong layer. The Docker image is the canonical distribution.
+- Ollama daemon stays native (`services.ollama`) — it's well-packaged in nixpkgs and GPU passthrough is cleaner as a systemd service. Model pulls are handled by a oneshot systemd service running `ollama pull <model>` at activation (idempotent).
+- Claude CLI and OpenClaw: npm-based, move extremely fast, lag in nixpkgs is weeks. Managed via `programs.npm` in home-manager or a shellInit block that installs on first use. Not worth attempting Nix packaging.
+
+**Consequences:**
+- `open-webui.nix` should be rewritten to use `virtualisation.oci-containers.containers.open-webui` with a pinned `ghcr.io/open-webui/open-webui` image tag. All pip/Python hacks drop out.
+- New fast-moving AI services default to OCI first — no debate needed each time.
+- `docker.nix` (`virtualisation.docker`) remains the single container runtime, shared across all OCI containers.
+- A new `ollama-models.nix` (or section in `ollama.nix`) handles `ollama pull` via a oneshot activation service.
+- Claude CLI wired into `shell-optiplex.nix` or home-manager `programs.npm.packages` rather than as a Nix package.
+- User-global npm installs (`npm install -g`) persist across NixOS rebuilds — they live in `~/.npm-global` under `/home/lorcan`, which NixOS never touches. This is intentional; no impermanence module is in use. Interactive auth state (`~/.config/`, `~/.local/share/`) survives the same way.
+
+**Revisit if:** nixpkgs Open-WebUI module tracks within one week of upstream releases and the source-build problem is solved by binary cache hits — at that point the Docker overhead isn't justified.
+
+---
+
 ## 2026-04-24 — Local alert-bridge translates Grafana webhooks into clean ntfy pushes
 
 **Context:** ntfy push notifications from Grafana alerts arrived as raw JSON payload dumps on the phone, not human-readable summaries. An earlier attempt (commit 5121865) added `headerName1`/`headerValue1` settings to the Grafana webhook contact point intending to set ntfy's `Title`/`Message` headers. Re-tested empirically against Grafana 12.4.2: the `headerNameN` keys are stored in the contact-point config but **silently dropped** at send time — Grafana's outbound HTTP request only includes the standard headers (`User-Agent: Grafana`, `Content-Type: application/json`, etc.). The fix never took effect.

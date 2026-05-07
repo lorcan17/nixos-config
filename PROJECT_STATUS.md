@@ -109,6 +109,26 @@ _Nothing currently in progress._
 - [ ] **WIP project dev workflow** — current loop (edit → commit → flake update → rebuild → test) is too slow for Python iteration. Decision needed on: (1) Syncthing `~/projects/` Mac → OptiPlex so local edits are live without committing; (2) `--override-input` to point NixOS at the synced local path instead of GitHub; (3) gitignored `.env` file per project for personal context (account nicknames, risk preferences, prompt tuning) that never hits git. Direct `python3 -m ...` execution on OptiPlex works as an interim workaround. See DECISIONS.md backlog.
 
 ### Tier 2 — First verticals (share TTS + job-runner scaffolding)
+
+#### RSS → Audio pipeline
+Defeat the algorithm: self-hosted RSS reader + optional article-to-audio conversion. FreshRSS handles auth, content extraction, and deduplication; FocusReader (paid client) connects via FreshRSS's Greader/Fever API so the client never touches original sites.
+
+Architecture:
+```
+FreshRSS (services.freshrss, NixOS-native)
+  ↓ Greader/Fever JSON API
+FocusReader (iOS/Android client, no auth complexity client-side)
+  ↓ optional: trigger article-to-audio
+article-to-audio service (reuses existing Kokoro/OpenAI TTS pipeline)
+  ↓ MP3 + RSS feed
+podcast app (AntennaPod etc.)
+```
+
+Tasks:
+- [ ] **FreshRSS** — `services.freshrss` in `modules/optiplex/freshrss.nix`; Caddy vhost `rss.{$DOMAIN}`; PostgreSQL or SQLite backend. FocusReader pointed at Greader API endpoint.
+- [ ] **Per-feed auth** — FreshRSS supports per-feed cookies + custom HTTP headers in feed config; wire paywalled feeds this way.
+- [ ] **Article-to-audio trigger** — optional webhook or cron: poll FreshRSS API for starred/tagged articles → extract full text → TTS → drop MP3 into podcasts dir. Reuses `audiobook.py` pipeline; OpenAI TTS `tts-1` as default (fast, cheap).
+
 - [ ] **Gutenberg → audiobook pipeline** — `make-audiobook --gutenberg ID`; Kokoro TTS → `.m4b` with chapters + cover + metadata → Audiobookshelf. Module written; needs `nixos-rebuild switch` on optiplex then first test run.
 - [ ] **Article → audio briefing** — `make-audiobook --url URL`; same pipeline, outputs `.mp3` to podcasts dir. Module written + rebuild done. **Blocked on TTS speed** — ~25 min/chunk on Kokoro CPU; a 18-chunk article takes ~7.5h. Decision needed (see below).
 - [ ] **Meeting transcription + summary** — Drop audio file into a watched folder (Syncthing or scp); OptiPlex: Whisper.cpp transcribes → Claude API summarises → delivers text summary (email or push). Optional second pass: Kokoro TTS reads the summary back as an audio file. Mac doesn't need to be on — OptiPlex runs the whole pipeline headlessly. Needs: Whisper.cpp module, Claude API agenix secret, delivery mechanism (email vs push vs Obsidian). Needs more thought before building.
@@ -150,6 +170,7 @@ Decision: defer until audiobook use frequency is known. Default to OpenAI TTS `t
 - [x] **finance-digest** — daily systemd timer reads DB → Claude analysis → ntfy push. Repo: `github:lorcan17/finance-digest`. Blocked on ntfy TLS. _(landed 2026-04-17)_
 - [ ] **Caddy TLS** — DNS-01 via Cloudflare wired in code. Needs: (1) create `cf-api-token.age` secret, (2) fix plugin hash after first failed build, (3) `nixos-rebuild switch`.
 - [ ] **LLM portfolio updater** — Python job: broker CSV/PDF from a Syncthing folder → Claude API extracts activities → POST to Ghostfolio `/api/v1/order`.
+- [ ] **Investment intelligence digest** — Enhancement to `finance-digest`. For each holding in `questrade-extract` positions, pull: (1) FreshRSS RSS feed(s) for the company/ticker; (2) FMP news + analyst signals via `fmp-api-key`. Claude synthesises into a per-holding thesis-check: "does this news support or challenge your original thesis?" + mixed-signal summary (price action, analyst revisions, recent headlines). Delivered as ntfy push or daily digest. Depends on: FreshRSS running (Tier 2 RSS pipeline), `finance-lake` positions mart (Foundry Step 3 ✅). Repo: extend `github:lorcan17/finance-digest`.
 - [ ] **Project Foundry — finance data lake** — DuckDB medallion + dbt + embedding pipeline. Tracked in its own folder: [projects/foundry/](./projects/foundry/) (SPEC, STATUS, DECISIONS).
 - [ ] **LangAlpha** — multi-agent equity research stack (LangGraph + MongoDB + Playwright + paid APIs, ~$30–80/mo realistic). Defer until Foundry is stable.
 
@@ -161,7 +182,7 @@ Decision: defer until audiobook use frequency is known. Default to OpenAI TTS `t
 - [ ] **Monitoring** — Prometheus + Grafana, or Netdata.
 
 ### Tier 5 — Reliability / ops
-- [ ] **Reboot strategy (reboot.nix or ops runbook)** — OptiPlex is not always-on; services that hold state (Transmission, Ghostfolio Postgres/Redis, VPN netns) need to survive a clean reboot gracefully. Strategy to cover: (1) `wantedBy = ["multi-user.target"]` + `after/requires` ordering for netns-dependent services; (2) verify Transmission resumes correctly after `wg-mullvad` comes up; (3) decide whether a `systemd-networkd-wait-online` or `network-online.target` dependency is sufficient; (4) document manual recovery steps for a dirty shutdown; (5) optionally add a boot-time health check that pings Tailscale + Mullvad before declaring the system ready.
+- [x] **Reboot strategy (`maintenance.nix`)** — Weekly reboot Sun 03:00, Nix GC Sun 02:00 (14d retention + store optimise), journal capped at 2G, smartd enabled. _(landed 2026-05-06)_ Skipped: explicit service dependency ordering (all services already use `multi-user.target`); manual recovery runbook.
 
 ### Tier 6 — Experiments / someday
 - [ ] **Car-hunt agent (Craigslist only)** — RSS per saved search → Claude API ranks against a spec (year, mileage, price band, Thule-box compatibility) → daily shortlist. Facebook Marketplace deliberately out of scope (anti-scraping too hostile); revisit via a Mac browser extension if needed.
@@ -188,6 +209,7 @@ Full ADR-lite entries with reasoning live in [DECISIONS.md](./DECISIONS.md). Thi
 
 | Date | Decision |
 |---|---|
+| 2026-05-06 | Miniflux over FreshRSS — Go binary vs PHP; both support Greader API for FocusReader |
 | 2026-04-24 | Local alert-bridge translates Grafana webhooks → ntfy (Grafana 12 silently drops custom webhook headers) |
 | 2026-04-24 | Defer review UI for finance pipeline — dbt seed CSVs are the v1 review surface; revisit after 1 month |
 | 2026-04-24 | No n8n for Foundry pipeline orchestration — systemd + Python post-consume hook is sufficient |
