@@ -118,6 +118,13 @@ in {
       ExecStart = pkgs.writeShellScript "finance-dbt-run" ''
         export FINANCE_DUCKDB="/var/lib/finance-lake/finance.duckdb"
         export DBT_PROFILES_DIR="/var/lib/finance-lake/dbt"
+        # The dbt project tree lives in the (read-only) Nix store, so point
+        # logs / target / packages at a writable state dir. Without this,
+        # dbt exits 2 silently when it can't open its log file.
+        export DBT_LOG_PATH="/var/lib/finance-lake/dbt-state/logs"
+        export DBT_TARGET_PATH="/var/lib/finance-lake/dbt-state/target"
+        export DBT_PACKAGES_INSTALL_PATH="/var/lib/finance-lake/dbt-state/packages"
+        mkdir -p "$DBT_LOG_PATH" "$DBT_TARGET_PATH" "$DBT_PACKAGES_INSTALL_PATH"
         cd /var/lib/finance-lake/dbt
         ${lakePkg}/bin/finance-lake-dbt seed
         ${lakePkg}/bin/finance-lake-dbt run
@@ -126,12 +133,8 @@ in {
     };
   };
 
-  systemd.timers.finance-dbt = {
-    wantedBy = [ "timers.target" ];
-    timerConfig = {
-      OnBootSec = "10min";
-      OnUnitInactiveSec = "15min";
-      Persistent = true;
-    };
-  };
+  # No timer — finance-dbt is manual. Run after dropping new statement PDFs:
+  #   ssh optiplex "sudo systemctl start finance-dbt.service"
+  # Cadence is roughly bi-monthly, so a calendar trigger would either
+  # over-fire (alert noise) or miss the day PDFs actually land.
 }

@@ -10,15 +10,34 @@
   # the [Unit] section; under [Service] it's silently ignored.
   systemd.services."ntfy-alert@" = {
     description = "ntfy alert for failed unit %i";
+    # Rate-limit: at most one ntfy push per failing unit per hour.
+    # systemd applies StartLimit per-instance, so each failing unit gets its
+    # own bucket — a flapping timer can't drown out a separate real failure.
+    startLimitIntervalSec = 3600;
+    startLimitBurst = 1;
     serviceConfig = {
       Type = "oneshot";
       User = "lorcan";
       ExecStart = pkgs.writeShellScript "ntfy-alert" ''
+        UNIT="%i"
+
+        # Capture exit code and last journal lines
+        EXIT_CODE=$(${pkgs.systemd}/bin/systemctl show --property=ExecMainStatus --value "$UNIT" 2>/dev/null || echo "unknown")
+        LAST_LINES=$(${pkgs.systemd}/bin/journalctl -u "$UNIT" -n 5 --no-pager 2>/dev/null | tail -3)
+
+        # Build message body with context
+        BODY="❌ $UNIT failed on optiplex
+
+        Exit code: $EXIT_CODE
+
+        Recent logs:
+        $LAST_LINES"
+
         ${pkgs.curl}/bin/curl -s \
-          -H "Title: ❌ %i failed" \
+          -H "Title: ❌ $UNIT failed" \
           -H "Priority: urgent" \
           -H "Tags: warning,optiplex" \
-          -d "systemd unit %i failed on optiplex — check: journalctl -u %i -n 50" \
+          -d "$BODY" \
           "https://ntfy.${domain}/alerts"
       '';
     };
