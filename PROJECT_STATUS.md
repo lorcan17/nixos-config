@@ -84,6 +84,8 @@ Secrets managed by agenix. Encrypted `.age` files in `secrets/`. Mac decrypts wi
 | Jellyseerr | `overseerr.nix` | ✅ Running | seer.blue-apricots.com; Jellyfin + Radarr + Sonarr connected |
 | AudioBookRequest | `audiobookrequest.nix` | ✅ Running | books.blue-apricots.com; Prowlarr + ABS wired; limited by lack of private tracker — public indexers sparse for audiobooks |
 | Vaultwarden | `vaultwarden.nix` | ✅ Running | vault.blue-apricots.com; Bitwarden-compatible |
+| Miniflux | `miniflux.nix` | ✅ Running | rss.{$DOMAIN}; Greader API enabled; FocusReader-compatible |
+| Maintenance | `maintenance.nix` | ✅ Running | Weekly GC + reboot Sun 03:00; journal capped 2G; SMART monitoring |
 | Backups | `backups.nix` | ⬜ Not started | Restic or borgbackup |
 | Syncthing | `syncthing.nix` | ⬜ Not started | Mac ↔ OptiPlex file sync |
 | Security hardening | `security.nix` | ⬜ Not started | fail2ban, SSH, audit rules |
@@ -111,13 +113,13 @@ _Nothing currently in progress._
 ### Tier 2 — First verticals (share TTS + job-runner scaffolding)
 
 #### RSS → Audio pipeline
-Defeat the algorithm: self-hosted RSS reader + optional article-to-audio conversion. FreshRSS handles auth, content extraction, and deduplication; FocusReader (paid client) connects via FreshRSS's Greader/Fever API so the client never touches original sites.
+Defeat the algorithm: self-hosted RSS reader + optional article-to-audio conversion. Miniflux handles feed fetching and deduplication; FocusReader (paid client) connects via Miniflux's Greader API.
 
 Architecture:
 ```
-FreshRSS (services.freshrss, NixOS-native)
-  ↓ Greader/Fever JSON API
-FocusReader (iOS/Android client, no auth complexity client-side)
+Miniflux (services.miniflux, NixOS-native, Go binary)
+  ↓ Greader JSON API
+FocusReader (iOS/Android client)
   ↓ optional: trigger article-to-audio
 article-to-audio service (reuses existing Kokoro/OpenAI TTS pipeline)
   ↓ MP3 + RSS feed
@@ -125,9 +127,9 @@ podcast app (AntennaPod etc.)
 ```
 
 Tasks:
-- [ ] **FreshRSS** — `services.freshrss` in `modules/optiplex/freshrss.nix`; Caddy vhost `rss.{$DOMAIN}`; PostgreSQL or SQLite backend. FocusReader pointed at Greader API endpoint.
-- [ ] **Per-feed auth** — FreshRSS supports per-feed cookies + custom HTTP headers in feed config; wire paywalled feeds this way.
-- [ ] **Article-to-audio trigger** — optional webhook or cron: poll FreshRSS API for starred/tagged articles → extract full text → TTS → drop MP3 into podcasts dir. Reuses `audiobook.py` pipeline; OpenAI TTS `tts-1` as default (fast, cheap).
+- [x] **Miniflux** — running at `rss.{$DOMAIN}`; Greader API enabled; FocusReader compatible. _(2026-05-06)_
+- [ ] **FocusReader setup** — add account in FocusReader: type=FreshRSS/Miniflux, URL=`https://rss.blue-apricots.com`, generate API key in Miniflux Settings → API Keys.
+- [ ] **Article-to-audio trigger** — optional: poll Miniflux API for starred articles → extract full text → TTS → drop MP3 into podcasts dir. Reuses `audiobook.py` pipeline; OpenAI TTS `tts-1` as default.
 
 - [ ] **Gutenberg → audiobook pipeline** — `make-audiobook --gutenberg ID`; Kokoro TTS → `.m4b` with chapters + cover + metadata → Audiobookshelf. Module written; needs `nixos-rebuild switch` on optiplex then first test run.
 - [ ] **Article → audio briefing** — `make-audiobook --url URL`; same pipeline, outputs `.mp3` to podcasts dir. Module written + rebuild done. **Blocked on TTS speed** — ~25 min/chunk on Kokoro CPU; a 18-chunk article takes ~7.5h. Decision needed (see below).
@@ -209,6 +211,7 @@ Full ADR-lite entries with reasoning live in [DECISIONS.md](./DECISIONS.md). Thi
 
 | Date | Decision |
 |---|---|
+| 2026-05-06 | Service placement policy — slow infra stays `services.*`, fast-moving AI layer uses `virtualisation.oci-containers`; CLI tools installed imperatively |
 | 2026-05-06 | Miniflux over FreshRSS — Go binary vs PHP; both support Greader API for FocusReader |
 | 2026-04-24 | Local alert-bridge translates Grafana webhooks → ntfy (Grafana 12 silently drops custom webhook headers) |
 | 2026-04-24 | Defer review UI for finance pipeline — dbt seed CSVs are the v1 review surface; revisit after 1 month |
