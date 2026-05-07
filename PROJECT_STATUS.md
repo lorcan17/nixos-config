@@ -187,6 +187,10 @@ Decision: defer until audiobook use frequency is known. Default to OpenAI TTS `t
 - [x] **Reboot strategy (`maintenance.nix`)** — Weekly reboot Sun 03:00, Nix GC Sun 02:00 (14d retention + store optimise), journal capped at 2G, smartd enabled. _(landed 2026-05-06)_ Skipped: explicit service dependency ordering (all services already use `multi-user.target`); manual recovery runbook.
 
 ### Tier 6 — Experiments / someday
+
+- [ ] **Authentik (SSO)** — self-hosted identity provider; single login across all services (Miniflux, Jellyfin, Grafana, etc.) + MFA. Needs Postgres + Redis; significant ops commitment. Revisit when stack is stable and managing per-service credentials becomes painful. NixOS module: `services.authentik`.
+
+
 - [ ] **Car-hunt agent (Craigslist only)** — RSS per saved search → Claude API ranks against a spec (year, mileage, price band, Thule-box compatibility) → daily shortlist. Facebook Marketplace deliberately out of scope (anti-scraping too hostile); revisit via a Mac browser extension if needed.
 - [ ] **Home Assistant** — if smart devices appear.
 - [ ] **Backups (backups.nix)** — Restic or borgbackup for OptiPlex data.
