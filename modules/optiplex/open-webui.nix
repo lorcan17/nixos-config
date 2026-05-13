@@ -1,29 +1,28 @@
 { domain, config, pkgs, ... }: {
-  services.open-webui = {
-    enable = true;
-    host   = "127.0.0.1";
-    port   = 8080;
+
+  virtualisation.oci-containers.containers.open-webui = {
+    image   = "ghcr.io/open-webui/open-webui:v0.6.5";
+    volumes = [
+      "/var/lib/open-webui:/app/backend/data"
+      # read-only mount at the path finance_tools.py expects via FINANCE_DUCKDB default
+      "/var/lib/finance-lake/finance.duckdb:/var/lib/finance-lake/finance.duckdb:ro"
+    ];
     environment = {
-      OLLAMA_BASE_URL = "http://localhost:11434";
-      WEBUI_AUTH      = "False";
-      # Redirect pip installs to a writable directory inside StateDirectory.
-      # PIP_TARGET makes `pip install` write there; PYTHONPATH makes it importable.
-      # Both ExecStartPre and the app process share the same filesystem namespace
-      # (StateDirectory), so this path is consistent across both.
-      PIP_TARGET  = "/var/lib/open-webui/python-packages";
-      PYTHONPATH  = "/var/lib/open-webui/python-packages";
+      OLLAMA_BASE_URL = "http://127.0.0.1:11434";
+      WEBUI_AUTH      = "false";
     };
-    # Loaded after open-webui-env-prep.service writes it.
-    environmentFile = "/run/open-webui-secrets/env";
+    # API keys written at boot by open-webui-env-prep.service
+    environmentFiles = [ "/run/open-webui-secrets/env" ];
+    # Host networking: Ollama on localhost works; Open-WebUI binds to host port 8080
+    extraOptions = [ "--network=host" ];
   };
 
-  # Separate oneshot that runs as root before open-webui starts.
-  # systemd loads EnvironmentFile before ExecStartPre, so we can't use ExecStartPre
-  # to create the file — it must exist before the service unit even starts.
+  # Oneshot that writes agenix secrets to an env file before the container starts.
+  # EnvironmentFile must exist before the container unit starts, so this must run first.
   systemd.services.open-webui-env-prep = {
     description = "Write open-webui API key env file";
-    before      = [ "open-webui.service" ];
-    requiredBy  = [ "open-webui.service" ];
+    before      = [ "docker-open-webui.service" ];
+    requiredBy  = [ "docker-open-webui.service" ];
     serviceConfig = {
       Type            = "oneshot";
       RemainAfterExit = true;
@@ -39,29 +38,9 @@
     };
   };
 
-  # duckdb for finance_tools.py; claude-code for the claude-code pipe.
-  systemd.services.open-webui.path = [ pkgs.duckdb pkgs.claude-code ];
-
   systemd.tmpfiles.rules = [
-    # Prune claude-agent-pipe workdirs older than 7 days.
-    "d /tmp/claude-agent-pipe 0755 root root -"
-    "e /tmp/claude-agent-pipe 0755 root root 7d"
+    "d /var/lib/open-webui 0750 root root -"
   ];
-
-  # Install claude-agent-sdk inside the service's own filesystem namespace.
-  # open-webui uses StateDirectory + PrivateTmp, so root-owned oneshots can't
-  # write into the path the service actually sees — must run as ExecStartPre
-  # under the service's own DynamicUser context.
-  # --no-deps: pydantic/httpx/anyio are already in OpenWebUI's Nix Python env;
-  # reinstalling them shadows the Nix versions and breaks pydantic-core C ext.
-  systemd.services.open-webui.serviceConfig.ExecStartPre =
-    "+${pkgs.writeShellScript "owui-pip-deps" ''
-      ${pkgs.python3Packages.pip}/bin/pip install \
-        --target /var/lib/open-webui/python-packages \
-        --no-deps \
-        --quiet \
-        'claude-agent-sdk>=0.1.60'
-    ''}";
 
   services.caddy.virtualHosts."chat.${domain}".extraConfig = ''
     import cloudflare_tls
