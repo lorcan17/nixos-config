@@ -4,17 +4,43 @@
     image   = "ghcr.io/open-webui/open-webui:v0.6.5";
     volumes = [
       "/var/lib/open-webui:/app/backend/data"
+      # persistent pip packages dir — populated by open-webui-pip-deps before start
+      "/var/lib/open-webui/site-packages:/extra-packages"
       # read-only mount at the path finance_tools.py expects via FINANCE_DUCKDB default
       "/var/lib/finance-lake/finance.duckdb:/var/lib/finance-lake/finance.duckdb:ro"
     ];
     environment = {
       OLLAMA_BASE_URL = "http://127.0.0.1:11434";
       WEBUI_AUTH      = "false";
+      PYTHONPATH      = "/extra-packages";
     };
     # API keys written at boot by open-webui-env-prep.service
     environmentFiles = [ "/run/open-webui-secrets/env" ];
     # Host networking: Ollama on localhost works; Open-WebUI binds to host port 8080
     extraOptions = [ "--network=host" ];
+  };
+
+  # Install extra Python packages (duckdb) into a persistent volume-mounted dir.
+  # Uses the same image so Python version matches; skips if already installed.
+  # Must run before the container so PYTHONPATH picks them up at startup.
+  systemd.services.open-webui-pip-deps = {
+    description = "Install extra Python packages for open-webui (duckdb)";
+    before      = [ "podman-open-webui.service" ];
+    requiredBy  = [ "podman-open-webui.service" ];
+    path        = [ pkgs.podman ];
+    serviceConfig = {
+      Type            = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = pkgs.writeShellScript "owui-pip-deps" ''
+        mkdir -p /var/lib/open-webui/site-packages
+        if [ ! -d /var/lib/open-webui/site-packages/duckdb ]; then
+          podman run --rm \
+            -v /var/lib/open-webui/site-packages:/extra-packages \
+            ghcr.io/open-webui/open-webui:v0.6.5 \
+            pip install --target /extra-packages --quiet duckdb
+        fi
+      '';
+    };
   };
 
   # Oneshot that writes agenix secrets to an env file before the container starts.
