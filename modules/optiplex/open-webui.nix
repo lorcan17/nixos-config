@@ -1,7 +1,7 @@
 { domain, config, pkgs, ... }: {
 
   virtualisation.oci-containers.containers.open-webui = {
-    image   = "ghcr.io/open-webui/open-webui:v0.6.5";
+    image   = "ghcr.io/open-webui/open-webui:v0.9.5";
     volumes = [
       "/var/lib/open-webui:/app/backend/data"
       # persistent pip packages dir — populated by open-webui-pip-deps before start
@@ -36,7 +36,7 @@
         if [ ! -d /var/lib/open-webui/site-packages/duckdb ]; then
           podman run --rm \
             -v /var/lib/open-webui/site-packages:/extra-packages \
-            ghcr.io/open-webui/open-webui:v0.6.5 \
+            ghcr.io/open-webui/open-webui:v0.9.5 \
             pip install --target /extra-packages --quiet duckdb
         fi
       '';
