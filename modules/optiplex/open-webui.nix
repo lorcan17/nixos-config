@@ -21,8 +21,8 @@
   # EnvironmentFile must exist before the container unit starts, so this must run first.
   systemd.services.open-webui-env-prep = {
     description = "Write open-webui API key env file";
-    before      = [ "docker-open-webui.service" ];
-    requiredBy  = [ "docker-open-webui.service" ];
+    before      = [ "podman-open-webui.service" ];
+    requiredBy  = [ "podman-open-webui.service" ];
     serviceConfig = {
       Type            = "oneshot";
       RemainAfterExit = true;
