@@ -70,11 +70,11 @@
         "statement-extract": "statement-extract"
       },
       "locked": {
-        "lastModified": 1777355635,
-        "narHash": "sha256-y/Ei3wlrnEXUZMaHpZs21rx7o5DJ+865/9sY//fF574=",
+        "lastModified": 1778718358,
+        "narHash": "sha256-rQjqWwhi0WzFcXHYLov7etvBjGeUcqv4jVNf15p1r6I=",
         "owner": "lorcan17",
         "repo": "finance-lake",
-        "rev": "8ba23f451420f9c9174d83f8fcdb408a90b93292",
+        "rev": "8a9937927151b95f03003f4f28f5d354fbc6dc9c",
         "type": "github"
       },
       "original": {
