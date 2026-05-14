@@ -70,6 +70,7 @@
 
   services.caddy.virtualHosts."chat.${domain}".extraConfig = ''
     import cloudflare_tls
+    header Content-Security-Policy "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; connect-src 'self' wss: https:; frame-src 'self' blob: data:"
     reverse_proxy localhost:8080
   '';
 }
