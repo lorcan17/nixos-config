@@ -1,8 +1,53 @@
 # Foundry — Status
 
-> Kanban for Project Foundry (personal finance data lake). See [SPEC.md](./SPEC.md) for architecture, [DECISIONS.md](./DECISIONS.md) for ADRs. Last updated: 2026-04-28.
+> Kanban for Project Foundry (personal finance data lake). See [SPEC.md](./SPEC.md) for architecture, [DECISIONS.md](./DECISIONS.md) for ADRs. Last updated: 2026-05-14.
 
 ## In Flight
+
+### Step 8 — Repo consolidation + ZFS (ADR-012)
+Consolidate `finance-lake` into a single `foundry` repo; add ZFS as storage substrate.
+
+**Prerequisite:** spare disk needed on OptiPlex — confirm availability with `lsblk` before starting ZFS work.
+
+#### 8a — `foundry` repo scaffold
+- [ ] Rename/restructure `finance-lake` → `foundry` on GitHub
+- [ ] Add `ingest/_lib/bronze.py` — `land()` function (source_domain/source_name/date partitioning, sha256, meta sidecar)
+- [ ] Add `ingest/banking/statements.py` — thin wrapper calling `statement-extract` + `land()`
+- [ ] Add `ingest/brokers/questrade.py` — thin wrapper calling `questrade-extract` + `land()`
+- [ ] Update `pyproject.toml` — `statement-extract` + `questrade-extract` as pinned git deps
+- [ ] Move `finance-lake/models/` + `seeds/` → `foundry/dbt/`
+- [ ] Update `flake.nix` input: `finance-lake` → `foundry`
+- [ ] Update `modules/optiplex/foundry.nix` — reference `inputs.foundry`
+
+#### 8b — Storage layout (ext4 now; ZFS deferred — ADR-014)
+Single disk on OptiPlex, no spare. `/lake/` lives under `/var/lib/foundry/lake/` on ext4. `LAKE_ROOT` env var is the only coupling point; migrating to ZFS later = update env var + mv files.
+- [ ] `systemd.tmpfiles.rules` in `foundry.nix` for `/var/lib/foundry/lake/{bronze,silver,inbox}`
+- [ ] Update `FINANCE_DUCKDB` → `/var/lib/foundry/lake/silver/finance.duckdb`
+- [ ] Draft `modules/wip/lake-storage.nix` (ZFS declarations ready to promote when second disk arrives)
+
+#### 8c — Inbox watcher
+- [ ] `ingest/inbox_sweep.py` — walks `/lake/inbox/`, calls `land()`, deletes on success
+- [ ] systemd path unit + service in `foundry/nix/lake-ingest.nix`
+
+### Step 7 — Decision intelligence layer (ADR-013)
+Every ingest domain modelled as thesis → decision → outcome. Calibration is the core data product.
+
+#### 7a — Obsidian investment notes ingest
+- [ ] Frontmatter convention enforced in Obsidian template: `ticker`, `decision_date`, `decision_type` (initiate/add/trim/exit/watch), `confidence` (0–1), `thesis`
+- [ ] `ingest/obsidian/vault.py` — land markdown files into `/lake/bronze/obsidian/<date>/`
+- [ ] `silver.investment_theses` dbt model — (ticker, decision_date, decision_type, thesis_text, confidence, note_path, embedding)
+
+#### 7b — Polymarket ingest
+- [ ] `ingest/polymarket/markets.py` — pull open positions + resolved outcomes via Polymarket API
+- [ ] `silver.prediction_market_bets` — (market_id, question, thesis, confidence, placed_at, resolved_at, outcome, brier_score)
+
+#### 7c — Calibration gold layer
+- [ ] `gold.calibration_by_domain` — running Brier score bucketed by category/domain
+- [ ] `gold.decision_vs_outcome` — joins investment theses to Questrade P&L; bets to resolution outcomes
+
+#### 7d — Evidence dashboard pages (extends Step 6)
+- [ ] Calibration curve page (confidence bucket vs actual accuracy)
+- [ ] Decision journal page (recent theses + outcomes)
 
 ### Step 3 — Mac end-to-end smoke test (GATE)
 Full pipeline green on Mac before any NixOS work:
@@ -15,6 +60,24 @@ Full pipeline green on Mac before any NixOS work:
 - [x] pytest passes _(1/1)_
 
 ## Backlog
+
+### Known issues — finance-dbt service plumbing _(surfaced 2026-05-06)_
+While silencing alert spam (`finance-dbt.timer` removed; `ntfy-alert@` rate-limited to 1/hr/unit; alert message bug fixed — see DECISIONS), a manual run of `finance-dbt.service` exposed two real bugs that had been masked by silently swallowed dbt output:
+
+- [x] **dbt log/target/packages must be writable** — fixed by setting `DBT_LOG_PATH`/`DBT_TARGET_PATH`/`DBT_PACKAGES_INSTALL_PATH` to `/var/lib/finance-lake/dbt-state/` in `foundry.nix` `ExecStart`. Project tree lives in the read-only Nix store; without writable paths dbt exits 2 before initialising stderr.
+- [x] **`DBT_PROFILES_DIR` was empty** — fixed by pointing to `${lakePkg}/share/finance-lake` (where the package ships `profiles.yml`) and exporting `DBT_TARGET=prod`.
+- [x] **Runtime seeds invisible to dbt** — fixed via option (b): added absolute `seed-paths` entry to `dbt_project.yml` (`["seeds", "/var/lib/finance-lake/dbt/seeds"]`); `flake.lock` bumped to pick up the change. `finance-dbt.service` now runs PASS=16 WARN=0 ERROR=0 on OptiPlex. _(2026-05-13)_
+
+### Step 6 — Evidence.dev dashboards (scaffolded 2026-04-28, WIP)
+Static dashboards over `finance-lake` gold marts. Build-time queries (DuckDB connector materialises parquet at `npm run build`); Caddy serves static output. ADR pending: build-time vs DuckDB-WASM client-side — chose build-time (data refresh is scheduled, not live; faster page loads; smaller payload).
+- [x] `~/projects/finance-dashboards/` scaffold — official Evidence template (`evidence-dev/template`) baseline, restyled pages (index/networth/spending), sources (networth_daily.sql, spending_by_category.sql joined to dim_categories), DuckDB connection via symlink + `EVIDENCE_SOURCE__finance_lake__filename=finance.duckdb`, flake.nix devshell
+- [x] `modules/wip/evidence.nix` drafted — `evidence-build.service` oneshot (git pull + npm ci + symlink prod DuckDB + npm run build), Caddy vhost `evidence.<domain>` serving static `build/`, daily timer fallback
+- [x] `npm install` + `npm run dev` smoke-test on Mac against dev DuckDB _(2026-04-28 — 1575 rows networth, 237 rows spend, http://localhost:3000 serves index/networth/spending)_
+- [x] **finance-lake fixes** — `dim_merchants` rewritten as passthrough view; `fact_transactions` gains a 5-tier `category_id` chain (override / transfer-detect / merchant / rule / default); `net_worth_daily` rebuilt from forward-filled bank statements (4 rows → 1575 days). See ADR-009, ADR-010._(2026-04-28)_
+- [ ] `gh repo create lorcan17/finance-dashboards --public` + initial push
+- [ ] Wire `OnSuccess=evidence-build.service` into `finance-dbt.service` in `foundry.nix` so dashboards rebuild after each mart refresh
+- [ ] Promote `modules/wip/evidence.nix` → `modules/optiplex/evidence.nix`
+- [ ] Uptime Kuma HTTP monitor for `evidence.<domain>`
 
 ### Step 4 — Push repos + wire NixOS orchestration
 - [x] Push `statement-extract` + `finance-lake` to GitHub _(2026-04-24 — both public at `github:lorcan17/{statement-extract,finance-lake}`)_
@@ -129,6 +192,12 @@ finance-lake/
 - [ ] Wait for `finance-dbt.timer` tick. Confirm: gold tables refresh.
 - [ ] Trigger an OpenAI-credits-out scenario manually (revoke key briefly): confirm ntfy fires; on key restore, next tick auto-resumes.
 
+### Polymarket agent _(future)_
+Monitor Polymarket markets matching domain tags (enterprise tech, Canadian regulatory, financial markets); draft thesis via LLM; push to ntfy for approval; auto-log on approval. Requires Step 7b ingest to be live first.
+
+### Phase 2 — Multi-person calibration corpus _(future)_
+Find 1–2 domain experts (small fund, serious prediction market trader, or sales leader) as co-pilots. Build ingest for their data shape. Cross-person calibration questions become possible: where do experts disagree, and who's right?
+
 ### Migrate Python packaging to uv-in-systemd
 After today's grind through dbt-duckdb derivations, namespace collisions, and rust source-builds for transitive deps (polars, blosc2, ndindex), the conclusion: Nix is right for the system, wrong for the Python env. Plan:
 - Keep `foundry.nix` (paperless service, secrets, systemd units, caddy) on Nix.
@@ -143,14 +212,12 @@ PR [#457151](https://github.com/NixOS/nixpkgs/pull/457151) is stale (~3 months) 
 - Once merged, drop our inline derivation and bump `nixpkgs` input.
 
 ### Step 6 — OpenWebUI tools (OptiPlex-only)
-`finance_sql` + `finance_describe` written (in `finance-lake/openwebui_tools/finance_tools.py`). Not yet wired to DuckDB read access. Pair with Claude Sonnet 4.6 via OpenRouter connection (Admin → Settings → Connections → `https://openrouter.ai/api/v1`). Still TODO in UI:
-- Add OpenRouter connection with `OPENROUTER_API_KEY` (set in env)
-- Install `finance_tools.py` via OpenWebUI Admin → Functions
-- Install inline-visualizer-v2 (https://github.com/Classic298/open-webui-plugins/tree/main/inline-visualizer-v2) for chart rendering
-
-**claude-code pipe blocked — Python packaging wall.** `tfriedel/openwebui-claude-code` requires `claude_agent_sdk`, which requires `mcp`, which requires `pydantic`. OpenWebUI's Nix Python env already has pydantic; installing again via pip shadows it and breaks pydantic-core C extensions (ImportError on `.so` map). `--no-deps` avoids the clash but then `mcp` is missing and the SDK's `__init__.py` fails to import. Two clean paths forward:
-1. **Bump nixpkgs to get OpenWebUI 0.9.1** — adds native Anthropic connector; no pipe needed for Claude models. Blocked until `caddy-src-with-plugins` hash mismatch is fixed upstream (track NixOS/nixpkgs Caddy bump).
-2. **Migrate open-webui to OCI container** — Docker image ships its own Python env; no Nix/pip conflict. `virtualisation.oci-containers` + named volume for `/app/backend/data`. Tradeoff: loses declarative Nix module API (`services.open-webui.*`), adds container runtime overhead. Viable given open-webui is already stateful.
+- [x] **Migrated Open-WebUI to OCI container** _(2026-05-13)_ — `modules/optiplex/open-webui.nix` fully rewritten from `services.open-webui` to `virtualisation.oci-containers`. Image: `ghcr.io/open-webui/open-webui:v0.9.5`. `--network=host`, persistent pip-deps oneshot (`duckdb` installed into `/var/lib/open-webui/site-packages`), `PYTHONPATH=/extra-packages`. Eliminates all Nix/pip Python packaging conflicts. Caddy CSP header updated to allow jsdelivr/cdnjs for Chart.js rendering.
+- [x] **`finance_tools.py` working at backend level** _(2026-05-13)_ — `finance_describe` + `finance_sql` async tools wired to real DuckDB at `/var/lib/finance-lake/finance.duckdb`. Schema hint updated to `main_silver`/`main_gold`. Confirmed via `podman exec` that duckdb 1.5.2 is installed and the file is accessible.
+- [x] **Anthropic native connector** — Claude Sonnet 4.6 connected via API key in Open-WebUI Admin → Connections.
+- [x] **inline-visualizer-v2 installed** — Chart.js rendering works when Code Interpreter is enabled.
+- [ ] **Tool calling inconsistency** — `finance_sql` sometimes narrates instead of executing; model occasionally loses tool context on "Continue". Root cause: `max_tokens` too low (response truncated mid-tool-result); Anthropic connection `max_tokens` override needs to be set in Admin → Connections → edit Anthropic. Fix next session.
+- [ ] **`max_tokens` override** — set on Anthropic connection to 4096+ to prevent mid-response truncation.
 
 ### Dashboard UI — Evidence
 Pick Evidence (`evidence.dev`) over Metabase/Superset: markdown + SQL → static dashboard, native DuckDB support, single binary. Plan:

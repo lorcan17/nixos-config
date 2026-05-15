@@ -4,6 +4,10 @@
 
 | ID | Date | Decision |
 |---|---|---|
+| ADR-014 | 2026-05-14 | Use ext4 for `/lake/` now; defer ZFS until a second disk is added to the OptiPlex |
+| ADR-013 | 2026-05-14 | Decision intelligence as north star — every ingest domain modelled as thesis → decision → outcome; Brier calibration in gold layer |
+| ADR-012 | 2026-05-14 | Consolidate `finance-lake` into single `foundry` repo; `statement-extract` + `questrade-extract` remain as pinned library deps; supersedes ADR-001 |
+| ADR-011 | 2026-05-13 | Migrate Open-WebUI from `services.open-webui` NixOS module to OCI container (`virtualisation.oci-containers`) |
 | ADR-008 | 2026-04-26 | Migrate Python services from `buildPythonPackage` to `uv run --frozen` in systemd; Nix only for system layer |
 | ADR-007 | 2026-04-26 | `dbt-duckdb` 1.10.1 packaged inline in `finance-lake/flake.nix`; avoid `python.override` to keep binary cache valid |
 | ADR-006 | 2026-04-25 | Drop-and-recreate bronze on every rebuild rather than migrate in place |
@@ -12,6 +16,112 @@
 | ADR-003 | 2026-04-23 | Dev loop runs on Mac first; NixOS wiring only after Mac-side pipeline is green |
 | ADR-002 | 2026-04-23 | Embeddings via OpenAI `text-embedding-3-small`, not local Ollama |
 | ADR-001 | 2026-04-23 | Three-repo split (`questrade-extract`, `bank-cc-extract`, `finance-lake`); `nix-config` orchestrates only |
+
+---
+
+## ADR-014 — Use ext4 for `/lake/` now; defer ZFS until second disk
+
+**Date:** 2026-05-14
+**Status:** Accepted
+
+**Context.** The OptiPlex has a single 476.9G ADATA SU650 SSD, fully partitioned (511M /boot + 476.4G / ext4). ZFS requires a dedicated disk or partition — carving the live root partition is too risky. A 2.5" SATA SSD (~$60–80 CAD) would fit the second bay, but isn't available yet.
+
+**Decision.** `/lake/` lives under `/var/lib/foundry/lake/` on the existing ext4 root partition. The `LAKE_ROOT` env var in `foundry.nix` is the only coupling point — migrating to ZFS later requires updating one env var and moving the files, no application code changes.
+
+When a second disk is added: create `lake` zpool, `zfs create` the dataset hierarchy, `mv /var/lib/foundry/lake/* /lake/`, update `LAKE_ROOT`, promote `modules/wip/lake-storage.nix` to `modules/optiplex/`.
+
+**What you lose by staying on ext4:**
+
+| Loss | Severity | Mitigation |
+|---|---|---|
+| **No block-level checksumming** | High — silent bit rot goes undetected | `sha256` in every `.meta.json` sidecar detects corruption at read time, not proactively |
+| **No atomic snapshots** | Medium — can't instantly roll back a bad ingest run | restic backups cover this; `finance.duckdb` `.bak.<ts>` copies cover the DB case |
+| **No transparent compression** | Low — bronze files take more space | lz4 on parquet/CSV is modest; disk is 476G so not urgent |
+| **No per-dataset tuning** | Low — can't set recordsize per layer | irrelevant at current data volumes |
+| **No `zfs send` incremental backups** | Low — restic fills this role | restic already planned in Step 7 housekeeping |
+| **No proactive scrubbing** | Medium — weekly integrity checks won't run | manual `sha256sum` sweep scriptable if wanted |
+
+The most meaningful loss is proactive integrity checking. ZFS scrubs verify every block against its checksum on a schedule — ext4 has no equivalent. The `.meta.json` sha256 sidecar detects corruption only when a file is read. For a personal homelab this is acceptable; for a production data lake it would not be.
+
+**Consequences.**
+- `modules/optiplex/lake-storage.nix` drafted now as `modules/wip/lake-storage.nix` — ready to promote when disk arrives.
+- Step 8b in STATUS.md rewritten: create `/var/lib/foundry/lake/{bronze,silver,inbox}` via `systemd.tmpfiles`, no ZFS declarations.
+- Revisit when second disk purchased. Estimated migration time: 30 minutes.
+
+---
+
+## ADR-013 — Decision intelligence as the north star
+
+**Date:** 2026-05-14
+**Status:** Accepted
+
+**Context.** Planning session 2026-05-14 — the question "what is this system actually for?" surfaced a clearer answer than "personal finance analytics." The system's durable value is a corpus of timestamped, calibrated decisions linked to measurable outcomes. Analytics dashboards are a consumer of that corpus, not the point of it. Most people who trade or bet have zero data on their own decision quality; this system produces exactly that data as a side effect of normal operation.
+
+**Decision.** Every ingest domain is modelled around the thesis → decision → outcome loop:
+- Obsidian investment notes: frontmatter convention (`ticker`, `decision_date`, `decision_type`, `confidence`, `thesis`) → `silver.investment_theses` → joined to Questrade P&L in gold
+- Polymarket bets: open positions + resolution outcomes → `silver.prediction_market_bets` → Brier score per bet
+- Future domains (hiring, real estate, technology bets) follow the same pattern — each is an ingest script + a silver model
+
+Calibration scoring (Brier score by domain/category) is a first-class gold model, not an afterthought. The Evidence dashboard includes a calibration curve page.
+
+**Why Brier score.** It rewards honest probability estimates — saying 90% when you win is only better than 70% if you're actually right 90% of the time. It's the standard in forecasting literature (Good Judgment Project, Metaculus) and computable with a single SQL expression: `(confidence - outcome)^2`.
+
+**Consequences.**
+- Obsidian investment note template needs a frontmatter block. New notes only; no backfill of old notes.
+- Polymarket ingest requires an API key and an open positions workflow.
+- `silver.investment_theses` and `silver.prediction_market_bets` are new dbt models (Step 7 in STATUS.md).
+- Long-term: the calibration corpus is the defensible asset. Software can be replicated; 3 years of timestamped decisions with outcomes cannot.
+
+---
+
+## ADR-012 — Consolidate pipeline into `foundry` repo; supersede ADR-001
+
+**Date:** 2026-05-14
+**Status:** Accepted — supersedes ADR-001
+
+**Context.** ADR-001 established a three-repo split: `questrade-extract`, `statement-extract`, `finance-lake`. After building Steps 3–6, the friction is clear: `finance-lake` has no good home for ingest scripts (thin wrappers that call the library repos and land data), dbt models are fine where they are, and the NixOS orchestration in `foundry.nix` is doing too much work that belongs in the pipeline repo.
+
+**Decision.** `finance-lake` is renamed and restructured into `foundry`. It owns:
+- `ingest/` — one script per source, each a thin wrapper calling the appropriate library and `land()`
+- `ingest/_lib/bronze.py` — the single `land()` function; only thing that writes to `/lake/bronze/`
+- `dbt/` — models and seeds (unchanged)
+- `mcp/` — future MCP server
+- `nix/` — NixOS modules exported by the flake (`lake-storage.nix`, `lake-ingest.nix`)
+
+`statement-extract` and `questrade-extract` remain as **separate library repos** — they're complex enough (PDF parsing, OAuth flows) to warrant isolation. `foundry/pyproject.toml` references them as pinned git deps. When a library needs a new version: bump the tag in `pyproject.toml`, run `uv lock`, push, bump `flake.lock` in nix-config.
+
+The rule: if an ingest concern is complex enough to have its own test suite and release cycle, it's a library. If it's a thin wrapper that calls a library and calls `land()`, it lives in `foundry/ingest/`.
+
+**ZFS addition.** Alongside this restructure, `/lake/` moves to a ZFS pool (`lake`) on a dedicated disk. Bronze files live at `/lake/bronze/<domain>/<source>/<YYYY-MM-DD>/`. `finance.duckdb` moves to `/lake/silver/`. ZFS provides compression (lz4 on bronze), scrubbing, and snapshots without application changes. Declared in `modules/optiplex/lake-storage.nix`.
+
+**Consequences.**
+- `flake.nix` input renamed: `finance-lake` → `foundry`.
+- `modules/optiplex/foundry.nix` updated to reference `inputs.foundry`.
+- Spare disk required on OptiPlex before ZFS work begins.
+- Cross-repo dep updates gain an extra step (tag bump + uv lock) — accepted as the price for clean library boundaries.
+- ADR-007's inline `dbt-duckdb` derivation is moot once `foundry` fully migrates to `uv run --frozen` (ADR-008).
+
+---
+
+## ADR-011 — Migrate Open-WebUI to OCI container
+
+**Date:** 2026-05-13
+**Status:** Accepted
+
+**Context.** `services.open-webui` (the NixOS module) ships a fixed Python env. Installing `duckdb` via pip into `PIP_TARGET` at startup conflicted with Open-WebUI's own pydantic/httpx — the finance tools were broken and a `claude-agent-sdk` pipe was completely blocked. The module was also pinned to an older version; v0.9.1+ adds a native Anthropic connector that eliminates the need for custom pipes.
+
+**Decision.** Rewrite `modules/optiplex/open-webui.nix` to use `virtualisation.oci-containers.containers.open-webui` with image `ghcr.io/open-webui/open-webui:v0.9.5`. Key points:
+- `--network=host` — Ollama on `127.0.0.1:11434` reachable; Open-WebUI on host port 8080.
+- `open-webui-pip-deps` oneshot installs `duckdb` into a persistent volume-mounted dir (`/var/lib/open-webui/site-packages`) before container starts; `PYTHONPATH=/extra-packages` picks it up. Skips re-install if already present.
+- `open-webui-env-prep` oneshot writes agenix secrets to `/run/open-webui-secrets/env` at boot.
+- Caddy CSP header updated to allow `cdn.jsdelivr.net` and `cdnjs.cloudflare.com` for Chart.js in inline-visualizer-v2.
+
+**Tradeoff.** Loses the declarative `services.open-webui.*` NixOS API; container state is opaque. Accepted — Open-WebUI is inherently stateful (chat history, user settings, tool files all in the volume), and the container image's isolated Python env eliminates all packaging conflicts permanently.
+
+**Consequences.**
+- `finance_tools.py` uses Python `duckdb` API (not CLI); confirmed working in container.
+- Future Open-WebUI upgrades are a one-line image tag bump + `nixos-rebuild switch`.
+- Adding Python packages to the container: add to the `pip install` list in `open-webui-pip-deps`.
 
 ---
 
@@ -177,3 +287,59 @@ All of this is *Nix Python packaging* friction. None of it is *Nix system tool* 
 - Generalises beyond Foundry — applies to all future personal Python projects.
 - ADR-007's inline `dbt-duckdb` derivation goes away entirely once foundry migrates to uv (deps come from PyPI).
 - `nixos-rebuild switch` on optiplex becomes seconds (no Python compile), restoring fast iteration.
+
+---
+
+## ADR-009 — Net worth time-series from forward-filled bank statements
+
+**Date:** 2026-04-28
+**Status:** Accepted (live in `finance-lake/models/gold/positions/net_worth_daily.sql`)
+
+**Context.** v1 of `net_worth_daily` summed Questrade portfolio market values per snapshot date. With Questrade snapshots starting 2026-04-17, the gold mart had **4 rows**, useless for any growth-over-time visual. Bank-statement headers (`bronze.bank_statements.closing_balance`) cover **2022-01-05 → 2026-04-20** across 8 active deposit accounts — all the depth was sitting unused in bronze.
+
+**Decision.** Replace `net_worth_daily` with a forward-filled bank-balance time series:
+- For each `(holder, account_number)`, each statement contributes its `closing_balance` to the window `[period_end, next_statement.period_end)`.
+- The latest statement extends to `current_date + 1 day`.
+- Cross join with a daily date spine; sum `closing_balance` across accounts per day.
+- Result: **1575 rows**, daily granularity, ~$40k → $112k cumulative growth visible.
+
+**Excluded from v2 scope.**
+- Questrade portfolio market value — sparse, has its own page.
+- Credit card `total_balance` as a liability — straightforward follow-up; deferred to keep this change tight.
+
+**Consequences.**
+- Dashboards (Evidence) show meaningful growth-over-time on the net-worth page.
+- `total_liabilities` is hardcoded `0` in v2 — column kept for future CC integration.
+- Adds `n_accounts_contributing` for sanity-checking that all expected accounts are represented on a given day.
+- Date spine uses `generate_series(min(period_end), current_date)` — recomputes on every dbt run; cheap at homelab scale.
+
+---
+
+## ADR-010 — Categorisation chain on `fact_transactions` with transfer-detection-first
+
+**Date:** 2026-04-28
+**Status:** Accepted (live in `finance-lake/models/silver/ledger/fact_transactions.sql`)
+
+**Context.** Two structural bugs were producing 100% `uncategorised` in `gold.spending_by_category`:
+1. `silver/ledger/dim_merchants.sql` was a stub creating an empty table — embed_enrich was writing to `silver.dim_merchants` (separate schema) and the dbt-materialised `main_silver.dim_merchants` stayed empty forever.
+2. `fact_transactions.merchant_id` was hardcoded `NULL` — no lookup against `dim_merchants` was wired in, so even with merchants populated, facts couldn't enrich.
+
+A naive substring-match fallback against `dim_category_rules` then surfaced a third issue: the rule pattern `nsf` matches *inside* "tra**nsf**er", routing $551k of inter-account transfers into "fees".
+
+**Decision.** Categorisation now lives on `fact_transactions` itself with this precedence chain:
+1. **`dim_category_overrides`** (manual override keyed on `stable_id`) — highest precedence.
+2. **Transfer detection** (runs second, preempts substring rules) — sources are `dim_transfer_rules`, `dim_category_rules` where category=`transfer`, plus regex catch-alls for `\btransfer\b` / `\btf\d+`.
+3. **Merchant** — `dim_merchants.canonical_name = clean_description` exact match (`'uncategorised'` rows fall through to step 4).
+4. **Substring rule** — `arg_min(category_id, priority)` over `dim_category_rules` patterns contained in `clean_description`, *excluding* transfer-category rules (transfer is settled in step 2).
+5. Default `'uncategorised'`.
+
+`dim_merchants` model rewritten as a passthrough view over the `silver.dim_merchants` source so embed_enrich's writes are immediately visible to downstream models without a dbt re-run.
+
+`category_source` column added (`override` / `transfer-detect` / `merchant` / `rule` / `default`) for diagnostic purposes.
+
+**Outcome.** From 0/6734 → 6734 facts categorised across 928 transfers + 868 rule + 156 merchant + 4782 still-`uncategorised`. Real-spend distribution now shows rent ($101k), groceries, dining, utilities, etc.
+
+**Known gaps (tech debt).**
+- Most facts (~70%) still default to `uncategorised` because `clean_description` and `canonical_name` rarely match exactly — embed_enrich's cleaning is more aggressive. Future work: have embed_enrich write a `clean_description → merchant_id` lookup table, or align cleaning regex.
+- Substring rules use `contains()` not word-boundary regex — covered by the transfer-first ordering for the worst false-positives, but other patterns (e.g. short tokens) may still misfire.
+- Hardcoded transfer regex `\btransfer\b` should ideally come from a curated rule set, not be inline in the model.

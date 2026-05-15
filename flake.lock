@@ -61,28 +61,6 @@
         "type": "github"
       }
     },
-    "finance-lake": {
-      "inputs": {
-        "flake-parts": "flake-parts",
-        "nixpkgs": [
-          "nixpkgs"
-        ],
-        "statement-extract": "statement-extract"
-      },
-      "locked": {
-        "lastModified": 1778718358,
-        "narHash": "sha256-rQjqWwhi0WzFcXHYLov7etvBjGeUcqv4jVNf15p1r6I=",
-        "owner": "lorcan17",
-        "repo": "finance-lake",
-        "rev": "8a9937927151b95f03003f4f28f5d354fbc6dc9c",
-        "type": "github"
-      },
-      "original": {
-        "owner": "lorcan17",
-        "repo": "finance-lake",
-        "type": "github"
-      }
-    },
     "flake-parts": {
       "inputs": {
         "nixpkgs-lib": "nixpkgs-lib"
@@ -134,6 +112,28 @@
       "original": {
         "owner": "hercules-ci",
         "repo": "flake-parts",
+        "type": "github"
+      }
+    },
+    "foundry": {
+      "inputs": {
+        "flake-parts": "flake-parts",
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "statement-extract": "statement-extract"
+      },
+      "locked": {
+        "lastModified": 1778823136,
+        "narHash": "sha256-E5vjuy3thgfcalDjXzVxxweI4zAwiexNoxAsL+vV758=",
+        "owner": "lorcan17",
+        "repo": "foundry",
+        "rev": "1e62299189f0e63bf3ef6844020c2299082de806",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lorcan17",
+        "repo": "foundry",
         "type": "github"
       }
     },
@@ -279,7 +279,7 @@
       "inputs": {
         "agenix": "agenix",
         "finance-digest": "finance-digest",
-        "finance-lake": "finance-lake",
+        "foundry": "foundry",
         "home-manager": "home-manager_2",
         "nix-darwin": "nix-darwin",
         "nixpkgs": "nixpkgs",
@@ -291,7 +291,7 @@
       "inputs": {
         "flake-parts": "flake-parts_2",
         "nixpkgs": [
-          "finance-lake",
+          "foundry",
           "nixpkgs"
         ]
       },

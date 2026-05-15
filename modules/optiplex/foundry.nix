@@ -1,12 +1,9 @@
-{ pkgs, config, domain, statement-extract, finance-lake, ... }:
+{ pkgs, config, domain, statement-extract, foundry, ... }:
 let
-  system  = pkgs.stdenv.hostPlatform.system;
-  lakePkg = finance-lake.packages.${system}.default;
+  system    = pkgs.stdenv.hostPlatform.system;
+  foundryPkg = foundry.packages.${system}.default;
 
   # Post-consume hook — Paperless invokes for every newly-OCR'd doc.
-  # Hook (in finance-lake) auto-detects parser, parses, inserts header+detail
-  # rows into bronze (idempotent on sha256), and PATCHes Paperless metadata
-  # so PAPERLESS_FILENAME_FORMAT auto-files the doc.
   postConsume = pkgs.writeShellScript "paperless-post-consume" ''
     set -euo pipefail
     # Paperless runs on python 3.13 and exports PYTHONPATH pointing at its
@@ -14,49 +11,44 @@ let
     # imports like `cryptography` resolve to paperless's 3.13 wheel and
     # crash on ABI-incompatible C extensions.
     unset PYTHONPATH
-    export FINANCE_DUCKDB="/var/lib/finance-lake/finance.duckdb"
+    export FINANCE_DUCKDB="/var/lib/foundry/lake/silver/finance.duckdb"
+    export LAKE_ROOT="/var/lib/foundry/lake"
     export PAPERLESS_URL="http://127.0.0.1:28981"
     export PAPERLESS_API_TOKEN="$(cat ${config.age.secrets.paperless-api-token.path})"
-    export DIM_HOLDERS_CSV="/var/lib/finance-lake/seeds/dim_holders.csv"
-    exec ${lakePkg}/bin/ingest-paperless-hook
+    export DIM_HOLDERS_CSV="/var/lib/foundry/seeds/dim_holders.csv"
+    exec ${foundryPkg}/bin/ingest-paperless-hook
   '';
 in {
   age.secrets.openai-api-key.owner = "lorcan";
 
   # Used by the Paperless post-consume hook to PATCH document metadata via REST.
-  # Owned by the paperless system user because the hook is invoked by paperless.
   age.secrets.paperless-api-token = {
     file  = ../../secrets/paperless-api-token.age;
     mode  = "0400";
     owner = "paperless";
   };
 
-  # The hook script lives at a stable path so paperless.nix can reference it.
   environment.etc."paperless/post-consume.sh".source = postConsume;
 
-  # Shared state. The hook (as paperless) and embed-enrich/dbt (as lorcan) both
-  # write to the DuckDB file, so the dir is owned by lorcan with paperless as
-  # the group, mode 0770. lorcan must be added to the paperless group
-  # (declared below) for this to work in both directions.
+  # Shared state directories. The hook (as paperless) and embed-enrich/dbt
+  # (as lorcan) both write to the DuckDB file — dir owned by lorcan, group
+  # paperless, mode 0770. lorcan must be in the paperless group.
   systemd.tmpfiles.rules = [
-    "d /var/lib/finance-lake            0770 lorcan paperless -"
-    "d /var/lib/finance-lake/seeds      0770 lorcan paperless -"
-    "d /var/lib/finance-lake/dbt        0770 lorcan paperless -"
-    "d /var/lib/finance-lake/dbt/seeds  0770 lorcan paperless -"
-    # finance.duckdb must be group-writable: created by lorcan (embed-enrich /
-    # dbt), then mutated by paperless (the post-consume ingest hook).
-    # `Z` recursively normalises mode + ownership on existing files too, so a
-    # file lorcan creates with default umask gets fixed up on next service tick.
-    "Z /var/lib/finance-lake          0770 lorcan paperless -"
+    "d /var/lib/foundry                      0770 lorcan paperless -"
+    "d /var/lib/foundry/lake                 0770 lorcan paperless -"
+    "d /var/lib/foundry/lake/bronze          0770 lorcan paperless -"
+    "d /var/lib/foundry/lake/silver          0770 lorcan paperless -"
+    "d /var/lib/foundry/lake/inbox           0770 lorcan paperless -"
+    "d /var/lib/foundry/seeds               0770 lorcan paperless -"
+    "d /var/lib/foundry/dbt                 0770 lorcan paperless -"
+    "d /var/lib/foundry/dbt/seeds           0770 lorcan paperless -"
+    # Z recursively normalises mode + ownership on existing files.
+    "Z /var/lib/foundry                      0770 lorcan paperless -"
   ];
 
   users.users.lorcan.extraGroups = [ "paperless" ];
 
   # --- embed-enrich ---------------------------------------------------------
-  # Picks up unenriched bronze rows (merchant cleanup, embedding, category
-  # assignment via dim_category_rules + LLM fallback). Idempotent — only
-  # processes rows where enriched_at IS NULL.
-
   systemd.services.embed-enrich = {
     description = "Foundry — enrich bronze rows (merchant + category)";
     after       = [ "network-online.target" ];
@@ -65,11 +57,11 @@ in {
     serviceConfig = {
       Type      = "oneshot";
       User      = "lorcan";
-      UMask     = "0007";  # files default to 0660 so paperless (group) can write
+      UMask     = "0007";
       ExecStart = pkgs.writeShellScript "embed-enrich-run" ''
         export OPENAI_API_KEY="$(cat ${config.age.secrets.openai-api-key.path})"
-        export FINANCE_DUCKDB="/var/lib/finance-lake/finance.duckdb"
-        exec ${lakePkg}/bin/embed-enrich
+        export FINANCE_DUCKDB="/var/lib/foundry/lake/silver/finance.duckdb"
+        exec ${foundryPkg}/bin/embed-enrich
       '';
       ExecStartPost = "${pkgs.curl}/bin/curl -fsS 'https://kuma.blue-apricots.com/api/push/V1hCTd4Enc6dKvBxUYNHBaViOcGQDmMk?status=up&msg=OK&ping='";
     };
@@ -78,17 +70,13 @@ in {
   systemd.timers.embed-enrich = {
     wantedBy = [ "timers.target" ];
     timerConfig = {
-      OnBootSec = "5min";
+      OnBootSec         = "5min";
       OnUnitInactiveSec = "15min";
-      Persistent = true;
+      Persistent        = true;
     };
   };
 
-  # --- dbt run --------------------------------------------------------------
-  # Copies the gitignored seeds (budgets, category_rules, account_normalization)
-  # from /var/lib/finance-lake/seeds into the dbt project tree, then runs
-  # `dbt seed && dbt run` incrementally. dim_categories.csv is in the repo.
-
+  # --- finance-dbt ----------------------------------------------------------
   systemd.services.finance-dbt = {
     description = "Foundry — dbt seed + incremental run";
     after       = [ "embed-enrich.service" ];
@@ -96,48 +84,34 @@ in {
     serviceConfig = {
       Type      = "oneshot";
       User      = "lorcan";
-      UMask     = "0007";  # files default to 0660 so paperless (group) can write
+      UMask     = "0007";
       ExecStartPre = pkgs.writeShellScript "finance-dbt-pre" ''
-        # Seeds that are gitignored (PII / personal taxonomy) live outside the
-        # Nix store. Copy them into the dbt project tree before each run.
         for f in dim_budgets.csv dim_category_rules.csv dim_account_normalization.csv dim_holders.csv; do
-          if [ -f /var/lib/finance-lake/seeds/$f ]; then
-            install -m 0640 /var/lib/finance-lake/seeds/$f \
-              /var/lib/finance-lake/dbt/seeds/$f
+          if [ -f /var/lib/foundry/seeds/$f ]; then
+            install -m 0640 /var/lib/foundry/seeds/$f \
+              /var/lib/foundry/dbt/seeds/$f
           fi
         done
-        # Bootstrap seeds that have no PII from their committed example files.
-        # dim_category_overrides is only copied if absent — it accumulates manual overrides.
         for f in dim_transfer_rules dim_category_overrides; do
-          dest=/var/lib/finance-lake/dbt/seeds/$f.csv
+          dest=/var/lib/foundry/dbt/seeds/$f.csv
           if [ ! -f $dest ]; then
-            install -m 0640 ${lakePkg}/share/finance-lake/seeds/$f.example.csv $dest
+            install -m 0640 ${foundryPkg}/share/foundry/seeds/$f.example.csv $dest
           fi
         done
       '';
       ExecStart = pkgs.writeShellScript "finance-dbt-run" ''
-        export FINANCE_DUCKDB="/var/lib/finance-lake/finance.duckdb"
-        # profiles.yml is shipped in the package tree; select the prod
-        # output so dbt writes to /var/lib/finance-lake/finance.duckdb.
-        export DBT_PROFILES_DIR="${lakePkg}/share/finance-lake"
+        export FINANCE_DUCKDB="/var/lib/foundry/lake/silver/finance.duckdb"
+        export DBT_PROFILES_DIR="${foundryPkg}/share/foundry"
         export DBT_TARGET="prod"
-        # The dbt project tree lives in the (read-only) Nix store, so point
-        # logs / target / packages at a writable state dir. Without this,
-        # dbt exits 2 silently when it can't open its log file.
-        export DBT_LOG_PATH="/var/lib/finance-lake/dbt-state/logs"
-        export DBT_TARGET_PATH="/var/lib/finance-lake/dbt-state/target"
-        export DBT_PACKAGES_INSTALL_PATH="/var/lib/finance-lake/dbt-state/packages"
+        export DBT_LOG_PATH="/var/lib/foundry/dbt-state/logs"
+        export DBT_TARGET_PATH="/var/lib/foundry/dbt-state/target"
+        export DBT_PACKAGES_INSTALL_PATH="/var/lib/foundry/dbt-state/packages"
         mkdir -p "$DBT_LOG_PATH" "$DBT_TARGET_PATH" "$DBT_PACKAGES_INSTALL_PATH"
-        cd /var/lib/finance-lake/dbt
-        ${lakePkg}/bin/finance-lake-dbt seed
-        ${lakePkg}/bin/finance-lake-dbt run
+        cd /var/lib/foundry/dbt
+        ${foundryPkg}/bin/foundry-dbt seed
+        ${foundryPkg}/bin/foundry-dbt run
       '';
       ExecStartPost = "${pkgs.curl}/bin/curl -fsS 'https://kuma.blue-apricots.com/api/push/Dt12yqSm45yinjcd3UKIhKsv3KKDcs5f?status=up&msg=OK&ping='";
     };
   };
-
-  # No timer — finance-dbt is manual. Run after dropping new statement PDFs:
-  #   ssh optiplex "sudo systemctl start finance-dbt.service"
-  # Cadence is roughly bi-monthly, so a calendar trigger would either
-  # over-fire (alert noise) or miss the day PDFs actually land.
 }
