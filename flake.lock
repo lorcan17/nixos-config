@@ -124,11 +124,11 @@
         "statement-extract": "statement-extract"
       },
       "locked": {
-        "lastModified": 1778823136,
-        "narHash": "sha256-E5vjuy3thgfcalDjXzVxxweI4zAwiexNoxAsL+vV758=",
+        "lastModified": 1778824252,
+        "narHash": "sha256-8nGQFY++DG3d7u7YnEmlE7rhO6RqRctB2MxexC0X+vs=",
         "owner": "lorcan17",
         "repo": "foundry",
-        "rev": "1e62299189f0e63bf3ef6844020c2299082de806",
+        "rev": "91cb67043a1656eebf2f84bc41216d61f0397029",
         "type": "github"
       },
       "original": {
