@@ -11,7 +11,7 @@ let
     # imports like `cryptography` resolve to paperless's 3.13 wheel and
     # crash on ABI-incompatible C extensions.
     unset PYTHONPATH
-    export FINANCE_DUCKDB="/var/lib/foundry/lake/silver/finance.duckdb"
+    export FINANCE_DUCKDB="/var/lib/foundry/foundry.duckdb"
     export LAKE_ROOT="/var/lib/foundry/lake"
     export PAPERLESS_URL="http://127.0.0.1:28981"
     export PAPERLESS_API_TOKEN="$(cat ${config.age.secrets.paperless-api-token.path})"
@@ -36,9 +36,8 @@ in {
   systemd.tmpfiles.rules = [
     "d /var/lib/foundry                      0770 lorcan paperless -"
     "d /var/lib/foundry/lake                 0770 lorcan paperless -"
-    "d /var/lib/foundry/lake/bronze          0770 lorcan paperless -"
-    "d /var/lib/foundry/lake/silver          0770 lorcan paperless -"
     "d /var/lib/foundry/lake/inbox           0770 lorcan paperless -"
+    "d /var/lib/foundry/lake/bronze          0770 lorcan paperless -"
     "d /var/lib/foundry/seeds               0770 lorcan paperless -"
     "d /var/lib/foundry/dbt                 0770 lorcan paperless -"
     "d /var/lib/foundry/dbt/seeds           0770 lorcan paperless -"
@@ -60,7 +59,7 @@ in {
       UMask     = "0007";
       ExecStart = pkgs.writeShellScript "embed-enrich-run" ''
         export OPENAI_API_KEY="$(cat ${config.age.secrets.openai-api-key.path})"
-        export FINANCE_DUCKDB="/var/lib/foundry/lake/silver/finance.duckdb"
+        export FINANCE_DUCKDB="/var/lib/foundry/foundry.duckdb"
         exec ${foundryPkg}/bin/embed-enrich
       '';
       ExecStartPost = "${pkgs.curl}/bin/curl -fsS 'https://kuma.blue-apricots.com/api/push/V1hCTd4Enc6dKvBxUYNHBaViOcGQDmMk?status=up&msg=OK&ping='";
@@ -100,7 +99,7 @@ in {
         done
       '';
       ExecStart = pkgs.writeShellScript "finance-dbt-run" ''
-        export FINANCE_DUCKDB="/var/lib/foundry/lake/silver/finance.duckdb"
+        export FINANCE_DUCKDB="/var/lib/foundry/foundry.duckdb"
         export DBT_PROFILES_DIR="${foundryPkg}/share/foundry"
         export DBT_TARGET="prod"
         export DBT_LOG_PATH="/var/lib/foundry/dbt-state/logs"

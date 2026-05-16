@@ -6,8 +6,8 @@
       "/var/lib/open-webui:/app/backend/data"
       # persistent pip packages dir — populated by open-webui-pip-deps before start
       "/var/lib/open-webui/site-packages:/extra-packages"
-      # read-only mount at the path finance_tools.py expects via FINANCE_DUCKDB default
-      "/var/lib/finance-lake/finance.duckdb:/var/lib/finance-lake/finance.duckdb:ro"
+      # read-only mount so finance_tools.py can query the lake
+      "/var/lib/foundry/foundry.duckdb:/var/lib/foundry/foundry.duckdb:ro"
     ];
     environment = {
       OLLAMA_BASE_URL = "http://127.0.0.1:11434";
