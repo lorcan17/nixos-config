@@ -95,7 +95,7 @@ in {
         for f in dim_transfer_rules dim_category_overrides; do
           dest=/var/lib/foundry/dbt/seeds/$f.csv
           if [ ! -f $dest ]; then
-            install -m 0640 ${foundryPkg}/share/foundry/seeds/$f.example.csv $dest
+            install -m 0640 ${foundryPkg}/share/foundry/dbt/seeds/$f.example.csv $dest
           fi
         done
       '';
