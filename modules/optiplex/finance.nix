@@ -1,7 +1,7 @@
-{ pkgs, config, domain, questrade-extract, finance-digest, ... }:
+{ pkgs, config, domain, questrade-extract, finance-digest, foundry, ... }:
 let
   otelPkgs   = ps: [ ps.opentelemetry-api ps.opentelemetry-sdk ps.opentelemetry-exporter-otlp-proto-grpc ];
-  extractEnv = pkgs.python3.withPackages (ps: [ ps.requests ] ++ otelPkgs ps);
+  foundryPkg = foundry.packages.${pkgs.system}.default;
   digestEnv  = pkgs.python3.withPackages (ps: [ ps.requests ps.anthropic ] ++ otelPkgs ps);
 in {
   # agenix secrets readable by lorcan
@@ -19,13 +19,13 @@ in {
     serviceConfig = {
       Type           = "oneshot";
       User           = "lorcan";
-      ExecStart      = "${extractEnv}/bin/python3 -m questrade_extract.runner";
+      ExecStart      = "${foundryPkg}/bin/ingest-questrade";
       ExecStartPost  = "${pkgs.curl}/bin/curl -fsS 'https://kuma.blue-apricots.com/api/push/RZBVNAMPW1ZXKA8cy5JRay3EIvhZkpAq?status=up&msg=OK&ping='";
       StateDirectory = "questrade-extract";
       Environment    = [
-        "PYTHONPATH=${questrade-extract}/src"
         "STATE_DIRECTORY=/var/lib/questrade-extract"
         "OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317"
+        "LAKE_ROOT=/var/lib/foundry/lake"
       ];
     };
   };

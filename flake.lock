@@ -124,11 +124,11 @@
         "statement-extract": "statement-extract"
       },
       "locked": {
-        "lastModified": 1778824252,
-        "narHash": "sha256-8nGQFY++DG3d7u7YnEmlE7rhO6RqRctB2MxexC0X+vs=",
+        "lastModified": 1778903654,
+        "narHash": "sha256-8uYj8RFYk8rMMCqBBYn4JoD99GSqdznePyXbhfEBGOE=",
         "owner": "lorcan17",
         "repo": "foundry",
-        "rev": "91cb67043a1656eebf2f84bc41216d61f0397029",
+        "rev": "ffe8cbcc7119867a224a15e62624c6943660616a",
         "type": "github"
       },
       "original": {
@@ -262,11 +262,11 @@
     "questrade-extract": {
       "flake": false,
       "locked": {
-        "lastModified": 1776466051,
-        "narHash": "sha256-4kmcpFohIEPBYJsMp3KfztNQs3hfvz1cpqDQK6As4Mg=",
+        "lastModified": 1778903637,
+        "narHash": "sha256-cGkPqtnHtS3EUiBRBFlkKINK9PvK1HkYWjFkqsTuVUQ=",
         "owner": "lorcan17",
         "repo": "questrade-extract",
-        "rev": "0bcae01bf9ba2c4828f57550ee843622b59f9184",
+        "rev": "5420fab8f0912e029dff399fa2a9ed6791c8f08d",
         "type": "github"
       },
       "original": {
