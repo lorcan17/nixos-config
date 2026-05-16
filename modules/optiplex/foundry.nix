@@ -37,6 +37,7 @@ in {
     "d /var/lib/foundry                      0770 lorcan paperless -"
     "d /var/lib/foundry/lake                 0770 lorcan paperless -"
     "d /var/lib/foundry/lake/inbox           0770 lorcan paperless -"
+    "d /var/lib/foundry/lake/inbox/banking   0770 lorcan paperless -"
     "d /var/lib/foundry/lake/bronze          0770 lorcan paperless -"
     "d /var/lib/foundry/seeds               0770 lorcan paperless -"
     "d /var/lib/foundry/dbt                 0770 lorcan paperless -"
@@ -111,6 +112,29 @@ in {
         ${foundryPkg}/bin/foundry-dbt run
       '';
       ExecStartPost = "${pkgs.curl}/bin/curl -fsS 'https://kuma.blue-apricots.com/api/push/Dt12yqSm45yinjcd3UKIhKsv3KKDcs5f?status=up&msg=OK&ping='";
+    };
+  };
+
+  # --- inbox watcher (banking) -----------------------------------------------
+  # Fires whenever inbox/banking/ is non-empty. Handles PDFs (full ingest) and
+  # CSVs (bronze landing + reconciliation table). Files are removed on success.
+  systemd.paths.foundry-inbox-banking = {
+    wantedBy = [ "multi-user.target" ];
+    pathConfig.DirectoryNotEmpty = "/var/lib/foundry/lake/inbox/banking";
+  };
+
+  systemd.services.foundry-inbox-banking = {
+    description = "Foundry — ingest banking statements from inbox";
+    unitConfig.OnFailure = "ntfy-alert@%n.service";
+    serviceConfig = {
+      Type  = "oneshot";
+      User  = "lorcan";
+      UMask = "0007";
+      ExecStart = pkgs.writeShellScript "foundry-inbox-banking-run" ''
+        export FINANCE_DUCKDB="/var/lib/foundry/foundry.duckdb"
+        export LAKE_ROOT="/var/lib/foundry/lake"
+        exec ${foundryPkg}/bin/ingest-inbox-banking
+      '';
     };
   };
 }
