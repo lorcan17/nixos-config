@@ -9,6 +9,10 @@
     # 22000/tcp (sync) + 21027/udp (discovery) opened on the firewall.
     openDefaultPorts = true;
 
+    # Allow reverse-proxy access via sync.<domain> — Syncthing rejects
+    # non-localhost Host headers by default.
+    settings.gui.insecureSkipHostcheck = true;
+
     settings.folders."foundry-inbox-banking" = {
       path  = "/var/lib/foundry/lake/inbox/banking";
       id    = "foundry-inbox-banking";
