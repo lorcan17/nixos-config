@@ -8,6 +8,10 @@
       cleanup    = "zap"; # remove any cask not listed here on darwin-rebuild switch
     };
 
+    brews = [
+      "syncthing"
+    ];
+
     casks = [
       # Browser
       "firefox"
